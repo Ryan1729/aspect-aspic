@@ -1,0 +1,28 @@
+[package]
+name = "rust-wasm-template"
+version = "0.1.0"
+authors = ["Ryan Wiedemann <Ryan1729@gmail.com>"]
+
+[dependencies]
+serde = "1"
+serde_derive = "1"
+bitflags = "0.7"
+
+[dependencies.stdweb]
+version = "0.3"
+
+[profile.dev]
+opt-level = 2
+debug = true
+rpath = false
+lto = false
+debug-assertions = true
+codegen-units = 4
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
