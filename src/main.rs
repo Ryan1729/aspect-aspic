@@ -1,4 +1,4 @@
-#![recursion_limit="2048"]
+#![recursion_limit = "2048"]
 #![allow(non_upper_case_globals)]
 #![allow(non_snake_case)]
 
@@ -12,23 +12,17 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::error::Error;
 
-use stdweb::web::{
-    self,
-    IEventTarget,
-    INode,
-    IElement,
-    Element
-};
+use stdweb::web::{self, Element, IElement, IEventTarget, INode};
 
-use stdweb::web::event::{
-    IEvent,
-    IKeyboardEvent,
-    KeydownEvent,
-    KeyupEvent,
-    KeyboardLocation
-};
+use stdweb::web::event::{IEvent, IKeyboardEvent, KeyboardLocation, KeydownEvent, KeyupEvent};
 
-use stdweb::{Value, UnsafeTypedArray};
+use stdweb::{UnsafeTypedArray, Value};
+
+mod common;
+use common::*;
+
+mod game;
+use game::update_and_render;
 
 macro_rules! enclose {
     ( [$( $x:ident ),*] $y:expr ) => {
@@ -41,13 +35,17 @@ macro_rules! enclose {
 
 // This creates a really basic WebGL context for blitting a single texture.
 // On some web browsers this is faster than using a 2d canvas.
-fn setup_webgl( canvas: &Element ) -> Value {
+fn setup_webgl(canvas: &Element) -> Value {
     const FRAGMENT_SHADER: &'static str = r#"
         precision mediump float;
         varying vec2 v_texcoord;
         uniform sampler2D u_sampler;
         void main() {
-            gl_FragColor = vec4( texture2D( u_sampler, vec2( v_texcoord.s, v_texcoord.t ) ).rgb, 1.0 );
+            gl_FragColor = vec4( texture2D(
+                u_sampler,
+                vec2( v_texcoord.s, v_texcoord.t ) ).rgb,
+                1.0
+             );
         }
     "#;
 
@@ -62,16 +60,15 @@ fn setup_webgl( canvas: &Element ) -> Value {
         }
     "#;
 
-    fn ortho( left: f64, right: f64, bottom: f64, top: f64 ) -> Vec< f64 > {
-        let mut m = vec![ 1.0, 0.0, 0.0, 0.0,
-                          0.0, 1.0, 0.0, 0.0,
-                          0.0, 0.0, 1.0, 0.0,
-                          0.0, 0.0, 0.0, 1.0 ];
+    fn ortho(left: f64, right: f64, bottom: f64, top: f64) -> Vec<f64> {
+        let mut m = vec![
+            1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0
+        ];
 
-        m[ 0 * 4 + 0 ] = 2.0 / (right - left);
-        m[ 1 * 4 + 1 ] = 2.0 / (top - bottom);
-        m[ 3 * 4 + 0 ] = (right + left) / (right - left) * -1.0;
-        m[ 3 * 4 + 1 ] = (top + bottom) / (top - bottom) * -1.0;
+        m[0 * 4 + 0] = 2.0 / (right - left);
+        m[1 * 4 + 1] = 2.0 / (top - bottom);
+        m[3 * 4 + 0] = (right + left) / (right - left) * -1.0;
+        m[3 * 4 + 1] = (top + bottom) / (top - bottom) * -1.0;
 
         return m;
     }
@@ -139,7 +136,16 @@ fn setup_webgl( canvas: &Element ) -> Value {
 
         var texture = gl.createTexture();
         gl.bindTexture( gl.TEXTURE_2D, texture );
-        gl.texImage2D( gl.TEXTURE_2D, 0, gl.RGBA, 256, 256, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array( 256 * 256 * 4 ) );
+        gl.texImage2D(
+            gl.TEXTURE_2D,
+             0,
+              gl.RGBA,
+               256,
+                256,
+                0,
+                 gl.RGBA,
+                  gl.UNSIGNED_BYTE,
+                  new Uint8Array( 256 * 256 * 4 ) );
         gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST );
         gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST );
 
@@ -181,107 +187,43 @@ fn setup_webgl( canvas: &Element ) -> Value {
     )
 }
 
-pub struct Framebuffer {
-    buffer: Vec< u16 >
-}
-
-impl PartialEq for Framebuffer {
-    fn eq( &self, other: &Framebuffer ) -> bool {
-        &self.buffer[..] == &other.buffer[..]
-    }
-}
-
-impl Eq for Framebuffer {}
-
-impl Framebuffer {
-    fn new() -> Framebuffer {
-        Framebuffer::default()
-    }
-
-    fn rainbow(&mut self, x: u8, y: u8) {
-        for i in 0..self.buffer.len() {
-            self.buffer[i] = (i + x as usize - (y as usize * 256)) as _;
-        }
-    }
-}
-
-impl Default for Framebuffer {
-    fn default() -> Self {
-        let mut buffer = Vec::new();
-        buffer.resize( 256 * 240, 0 );
-
-        Framebuffer {
-            buffer
-        }
-    }
-}
-
-pub struct State {
-    framebuffer: Framebuffer,
-    gamepad: Button::Ty,
-    x: u8,
-    y: u8,
-}
-
 impl State {
     pub fn new() -> State {
         let mut framebuffer = Framebuffer::new();
 
-        let x  = 128;
-        let y  = 120;
-
-        framebuffer.rainbow(x,y);
-
         State {
             framebuffer,
             gamepad: Button::Ty::empty(),
-            x,
-            y,
+            game_state: GameState::new(),
         }
     }
 
-    fn frame(&mut self) {
-        if self.gamepad.contains( Button::Left ) {
-            self.x = self.x.wrapping_sub(1);
-        }
+    pub fn framebuffer(&self, framebuffer: &mut [u32; 256 * 240]) {
+        for (pixel_in, pixel_out) in self.framebuffer.buffer.iter().zip(framebuffer.iter_mut()) {
+            let r = Self::beside(((pixel_in & 0x000F) >> 0) as u32);
+            let g = Self::beside(((pixel_in & 0x00F0) >> 4) as u32);
+            let b = Self::beside(((pixel_in & 0x0F00) >> 8) as u32);
+            let a = Self::beside(((pixel_in & 0xF000) >> 12) as u32);
 
-        if self.gamepad.contains( Button::Right ) {
-            self.x = self.x.wrapping_add(1);
+            *pixel_out = r | g << 8 | b << 16 | a << 24
         }
-
-        if self.gamepad.contains( Button::Up ) {
-            self.y = self.y.wrapping_sub(1);
-        }
-
-        if self.gamepad.contains( Button::Down ) {
-            self.y = self.y.wrapping_add(1);
-        }
-
-        self.framebuffer.rainbow(self.x, self.y);
     }
 
-    fn press( &mut self, button: Button::Ty ) {
-        self.gamepad.insert( button );
+    #[inline]
+    fn beside(x: u32) -> u32 {
+        x | x << 4
     }
 
-    fn release( &mut self, button: Button::Ty ) {
-        self.gamepad.remove( button );
+    pub fn frame(&mut self) {
+        update_and_render(&mut self.game_state, &mut self.framebuffer, self.gamepad);
     }
-}
 
-// These values are deliberately picked to be the same as the ones in NES' input registers.
-pub mod Button {
-    bitflags! {
-        pub flags Ty: u8 {
-            const A          = 1 << 0,
-            const B          = 1 << 1,
-            const Select     = 1 << 2,
-            const Start      = 1 << 3,
-            const Up         = 1 << 4,
-            const Down       = 1 << 5,
-            const Left       = 1 << 6,
-            const Right      = 1 << 7
-        }
+    pub fn press(&mut self, button: Button::Ty) {
+        self.gamepad.insert(button);
+    }
+
+    pub fn release(&mut self, button: Button::Ty) {
+        self.gamepad.remove(button);
     }
 }
 
@@ -290,12 +232,12 @@ struct PinkyWeb {
     framebuffer: [u32; 256 * 240],
     paused: bool,
     busy: bool,
-    js_ctx: Value
+    js_ctx: Value,
 }
 
 impl PinkyWeb {
-    fn new( canvas: &Element ) -> Self {
-        let gl = setup_webgl( &canvas );
+    fn new(canvas: &Element) -> Self {
+        let gl = setup_webgl(&canvas);
 
         let js_ctx = js!(
             var h = {};
@@ -327,81 +269,75 @@ impl PinkyWeb {
             framebuffer: [0; 256 * 240],
             paused: true,
             busy: false,
-            js_ctx
+            js_ctx,
         }
     }
 
-    fn pause( &mut self ) {
+    fn pause(&mut self) {
         self.paused = true;
     }
 
-    fn unpause( &mut self ) {
+    fn unpause(&mut self) {
         self.paused = false;
         self.busy = false;
     }
 
-    fn execute_cycle( &mut self ) -> Result< bool, Box< Error > > {
+    fn execute_cycle(&mut self) -> Result<bool, Box<Error>> {
         self.state.frame();
 
-        Ok ( true )
+        Ok(true)
     }
 
-    fn run_a_bit( &mut self ) -> Result< bool, Box< Error > > {
+    fn run_a_bit(&mut self) -> Result<bool, Box<Error>> {
         if self.paused {
-            return Ok( true );
+            return Ok(true);
         }
 
         loop {
-            let result =  self.execute_cycle();
+            let result = self.execute_cycle();
             match result {
-                Ok( processed_whole_frame ) => {
+                Ok(processed_whole_frame) => {
                     if processed_whole_frame {
-                        return Ok( true );
+                        return Ok(true);
                     }
-                },
-                Err( error ) => {
+                }
+                Err(error) => {
                     js!( console.error( "Execution error:", @{format!( "{}", error )} ); );
                     self.pause();
 
-                    return Err( error );
+                    return Err(error);
                 }
             }
         }
     }
 
-    #[inline]
-    fn beside(x: u32) -> u32 {
-        x | x << 4
-    }
-
-    fn draw( &mut self ) {
-        let framebuffer = &self.state.framebuffer;
+    fn draw(&mut self) {
         if !self.paused {
-            for (pixel_in, pixel_out) in framebuffer.buffer.iter().zip( self.framebuffer.iter_mut() ) {
-                let r = Self::beside(((pixel_in & 0x000F) >> 0) as u32);
-                let g = Self::beside(((pixel_in & 0x00F0) >> 4) as u32);
-                let b = Self::beside(((pixel_in & 0x0F00) >> 8) as u32);
-                let a = Self::beside(((pixel_in & 0xF000) >> 12) as u32);
+            self.state.framebuffer(&mut self.framebuffer);
 
-                *pixel_out = r | g << 8 | b << 16 | a << 24
-            }
-        }
-
-        js! {
-            var h = @{&self.js_ctx};
-            var framebuffer = @{unsafe { UnsafeTypedArray::new( &self.framebuffer ) }};
-            if( h.gl ) {
-                var data = new Uint8Array( framebuffer.buffer, framebuffer.byteOffset, framebuffer.byteLength );
-                h.gl.texSubImage2D( h.gl.TEXTURE_2D, 0, 0, 0, 256, 240, h.gl.RGBA, h.gl.UNSIGNED_BYTE, data );
-                h.gl.drawElements( h.gl.TRIANGLES, 6, h.gl.UNSIGNED_SHORT, 0 );
-            } else {
-                h.buffer.set( framebuffer );
-                h.ctx.putImageData( h.img, 0, 0 );
+            js! {
+                var h = @{&self.js_ctx};
+                var framebuffer = @{unsafe {
+                    UnsafeTypedArray::new( &self.framebuffer )
+                 }};
+                if( h.gl ) {
+                    var data = new Uint8Array(
+                        framebuffer.buffer,
+                        framebuffer.byteOffset,
+                        framebuffer.byteLength
+                    );
+                    h.gl.texSubImage2D( h.gl.TEXTURE_2D,
+                         0, 0, 0, 256, 240, h.gl.RGBA, h.gl.UNSIGNED_BYTE, data );
+                    h.gl.drawElements( h.gl.TRIANGLES, 6, h.gl.UNSIGNED_SHORT, 0 );
+                } else {
+                    h.buffer.set( framebuffer );
+                    h.ctx.putImageData( h.img, 0, 0 );
+                }
             }
         }
     }
 
-    fn on_key( &mut self, key: &str, location: KeyboardLocation, is_pressed: bool ) -> bool {
+    fn on_key(&mut self, key: &str, location: KeyboardLocation, is_pressed: bool) -> bool {
         let button = match (key, location) {
             ("Enter", _) => Button::Start,
             ("Shift", KeyboardLocation::Right) => Button::Select,
@@ -431,27 +367,27 @@ impl PinkyWeb {
             // your browser be?
             ("Unidentified", _) if is_pressed == false => Button::A,
 
-            _ => return false
+            _ => return false,
         };
 
-        PinkyWeb::set_button_state( self, button, is_pressed );
+        PinkyWeb::set_button_state(self, button, is_pressed);
         return true;
     }
 
-    fn set_button_state( &mut self, button: Button::Ty, is_pressed: bool ) {
+    fn set_button_state(&mut self, button: Button::Ty, is_pressed: bool) {
         if is_pressed {
             self.state.press(button);
         } else {
             self.state.release(button);
         }
-
     }
 }
 
-fn emulate_for_a_single_frame( pinky: Rc< RefCell< PinkyWeb > > ) {
+fn emulate_for_a_single_frame(pinky: Rc<RefCell<PinkyWeb>>) {
     pinky.borrow_mut().busy = true;
 
-    web::set_timeout( enclose!( [pinky] move || {
+    web::set_timeout(
+        enclose!( [pinky] move || {
         let finished_frame = match pinky.borrow_mut().run_a_bit() {
             Ok( result ) => result,
             Err( error ) => {
@@ -466,39 +402,49 @@ fn emulate_for_a_single_frame( pinky: Rc< RefCell< PinkyWeb > > ) {
             let mut pinky = pinky.borrow_mut();
             pinky.busy = false;
         }
-    }), 0 );
+    }),
+        0,
+    );
 }
 
-fn main_loop( pinky: Rc< RefCell< PinkyWeb > > ) {
+fn main_loop(pinky: Rc<RefCell<PinkyWeb>>) {
     // If we're running too slowly there is no point
     // in queueing up even more work.
     if !pinky.borrow_mut().busy {
-        emulate_for_a_single_frame( pinky.clone() );
+        emulate_for_a_single_frame(pinky.clone());
     }
 
     pinky.borrow_mut().draw();
-    web::window().request_animation_frame( move |_| {
-        main_loop( pinky );
+    web::window().request_animation_frame(move |_| {
+        main_loop(pinky);
     });
 }
 
-fn show( id: &str ) {
-    web::document().get_element_by_id( id ).unwrap().class_list().remove( "hidden" );
+fn show(id: &str) {
+    web::document()
+        .get_element_by_id(id)
+        .unwrap()
+        .class_list()
+        .remove("hidden");
 }
 
-fn hide( id: &str ) {
-    web::document().get_element_by_id( id ).unwrap().class_list().add( "hidden" );
+fn hide(id: &str) {
+    web::document()
+        .get_element_by_id(id)
+        .unwrap()
+        .class_list()
+        .add("hidden");
 }
 
-fn support_input( pinky: Rc< RefCell< PinkyWeb > > ) {
-    web::window().add_event_listener( enclose!( [pinky] move |event: KeydownEvent| {
+fn support_input(pinky: Rc<RefCell<PinkyWeb>>) {
+    web::window().add_event_listener(enclose!( [pinky] move |event: KeydownEvent| {
         let handled = pinky.borrow_mut().on_key( &event.key(), event.location(), true );
         if handled {
             event.prevent_default();
         }
     }));
 
-    web::window().add_event_listener( enclose!( [pinky] move |event: KeyupEvent| {
+    web::window().add_event_listener(enclose!( [pinky] move |event: KeyupEvent| {
         let handled = pinky.borrow_mut().on_key( &event.key(), event.location(), false );
         if handled {
             event.prevent_default();
@@ -506,31 +452,34 @@ fn support_input( pinky: Rc< RefCell< PinkyWeb > > ) {
     }));
 }
 
-fn handle_error< E: Into< Box< Error > > >( error: E ) {
-    let error_message = format!( "{}", error.into() );
-    web::document().get_element_by_id( "error-description" ).unwrap().set_text_content( &error_message );
+fn handle_error<E: Into<Box<Error>>>(error: E) {
+    let error_message = format!("{}", error.into());
+    web::document()
+        .get_element_by_id("error-description")
+        .unwrap()
+        .set_text_content(&error_message);
 
-    hide( "viewport" );
-    show( "error" );
+    hide("viewport");
+    show("error");
 }
 
 fn main() {
     stdweb::initialize();
 
-    let canvas = web::document().get_element_by_id( "viewport" ).unwrap();
-    let pinky = Rc::new( RefCell::new( PinkyWeb::new( &canvas ) ) );
+    let canvas = web::document().get_element_by_id("viewport").unwrap();
+    let pinky = Rc::new(RefCell::new(PinkyWeb::new(&canvas)));
 
-    support_input( pinky.clone() );
+    support_input(pinky.clone());
 
-    hide( "loading" );
-    hide( "error" );
+    hide("loading");
+    hide("error");
 
     pinky.borrow_mut().unpause();
 
-    show( "viewport" );
+    show("viewport");
 
-    web::window().request_animation_frame( move |_| {
-        main_loop( pinky );
+    web::window().request_animation_frame(move |_| {
+        main_loop(pinky);
     });
 
     stdweb::event_loop();
