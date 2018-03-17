@@ -19,9 +19,25 @@ impl Framebuffer {
         Framebuffer::default()
     }
 
-    pub fn rainbow(&mut self, x: u8, y: u8) {
+    pub fn draw_rect(&mut self, x: usize, y: usize, width: usize, height: usize, colour: u16) {
+        let one_past_right_edge = x + width;
+        let one_past_bottom_edge = y + height;
+
+        for current_y in y..one_past_bottom_edge {
+            for current_x in x..one_past_right_edge {
+                let i = current_y
+                    .saturating_mul(SCREEN_WIDTH)
+                    .saturating_add(current_x);
+                if i < self.buffer.len() {
+                    self.buffer[i] = colour;
+                }
+            }
+        }
+    }
+
+    pub fn rainbow(&mut self, x: usize, y: usize) {
         for i in 0..self.buffer.len() {
-            self.buffer[i] = (i + x as usize - (y as usize * 2)) as _;
+            self.buffer[i] = (i + x - (y * 2)) as _;
         }
     }
 }
@@ -36,8 +52,8 @@ impl Default for Framebuffer {
 }
 
 pub struct GameState {
-    pub x: u8,
-    pub y: u8,
+    pub x: usize,
+    pub y: usize,
     pub board: Board,
 }
 
@@ -128,7 +144,7 @@ pub fn get_board_index(x: usize, y: usize) -> Option<usize> {
         None
     }
 }
-
+#[allow(dead_code)]
 pub fn get_board_xy(index: usize) -> Option<(usize, usize)> {
     if !is_index_on_board(index) {
         return None;

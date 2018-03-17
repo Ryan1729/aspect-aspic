@@ -1,6 +1,11 @@
 use common::GameState;
 use common::Framebuffer;
 use common::Button;
+use common::{CELL_HEIGHT, CELL_WIDTH};
+
+const BLUE: u16 = 0xFE22;
+//const GREEN: u16 = 0xF2E2;
+//const RED: u16 = 0xF22E;
 
 #[inline]
 pub fn update_and_render(
@@ -24,5 +29,7 @@ pub fn update_and_render(
         state.y = state.y.wrapping_add(1);
     }
 
-    framebuffer.rainbow(state.x, state.y);
+    // framebuffer.rainbow(state.x, state.y);
+
+    framebuffer.draw_rect(state.x, state.y, CELL_WIDTH, CELL_HEIGHT, BLUE);
 }
