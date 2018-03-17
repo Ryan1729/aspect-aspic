@@ -130,7 +130,7 @@ fn setup_webgl(canvas: &Element) -> Value {
         var sampler_uniform = gl.getUniformLocation( program, "u_sampler" );
         gl.uniform1i( sampler_uniform, 0 );
 
-        var matrix = @{ortho( 0.0, SCREEN_WIDTH_f64, SCREEN_HEIGHT_f64, 0.0 )};
+        var matrix = @{ortho( 0.0, 256.0, 240.0, 0.0 )};
         var matrix_uniform = gl.getUniformLocation( program, "u_matrix" );
         gl.uniformMatrix4fv( matrix_uniform, false, matrix );
 
@@ -140,12 +140,12 @@ fn setup_webgl(canvas: &Element) -> Value {
             gl.TEXTURE_2D,
             0,
             gl.RGBA,
-            SCREEN_WIDTH,
-            SCREEN_WIDTH,
+            256,
+            256,
             0,
             gl.RGBA,
             gl.UNSIGNED_BYTE,
-            new Uint8Array( SCREEN_WIDTH * SCREEN_WIDTH * 4 )
+            new Uint8Array( 256 * 256 * 4 )
           );
         gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST );
         gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST );
@@ -154,9 +154,9 @@ fn setup_webgl(canvas: &Element) -> Value {
         gl.bindBuffer( gl.ARRAY_BUFFER, vertex_buffer );
         var vertices = [
             0.0, 0.0,
-            0.0, SCREEN_HEIGHT_f64,
-            SCREEN_WIDTH_f64, 0.0,
-            SCREEN_WIDTH_f64, SCREEN_HEIGHT_f64
+            0.0, 240.0,
+            256.0, 0.0,
+            256.0, 240.0
         ];
         gl.bufferData( gl.ARRAY_BUFFER, new Float32Array( vertices ), gl.STATIC_DRAW );
         gl.vertexAttribPointer( vertex_attr, 2, gl.FLOAT, false, 0, 0 );
@@ -165,9 +165,9 @@ fn setup_webgl(canvas: &Element) -> Value {
         gl.bindBuffer( gl.ARRAY_BUFFER, texcoord_buffer );
         var texcoords = [
             0.0, 0.0,
-            0.0, SCREEN_HEIGHT_f64 / SCREEN_WIDTH_f64,
+            0.0, 240.0 / 256.0,
             1.0, 0.0,
-            1.0, SCREEN_HEIGHT_f64 / SCREEN_WIDTH_f64
+            1.0, 240.0 / 256.0
         ];
         gl.bufferData( gl.ARRAY_BUFFER, new Float32Array( texcoords ), gl.STATIC_DRAW );
         gl.vertexAttribPointer( texcoord_attr, 2, gl.FLOAT, false, 0, 0 );
@@ -182,7 +182,7 @@ fn setup_webgl(canvas: &Element) -> Value {
 
         gl.clearColor( 0.0, 0.0, 0.0, 1.0 );
         gl.enable( gl.DEPTH_TEST );
-        gl.viewport( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT );
+        gl.viewport( 0, 0, 256, 240 );
 
         return gl;
     )
@@ -190,7 +190,7 @@ fn setup_webgl(canvas: &Element) -> Value {
 
 struct PinkyWeb {
     state: State,
-    framebuffer: [u32; SCREEN_WIDTH * SCREEN_HEIGHT],
+    framebuffer: [u32; 256 * 240],
     paused: bool,
     busy: bool,
     js_ctx: Value,
@@ -218,7 +218,7 @@ impl PinkyWeb {
                 canvas = new_canvas;
 
                 h.ctx = canvas.getContext( "2d" );
-                h.img = h.ctx.createImageData( SCREEN_WIDTH, SCREEN_HEIGHT );
+                h.img = h.ctx.createImageData( 256, 240 );
                 h.buffer = new Uint32Array( h.img.data.buffer );
             }
 
@@ -227,7 +227,7 @@ impl PinkyWeb {
 
         PinkyWeb {
             state: State::new(),
-            framebuffer: [0; SCREEN_WIDTH * SCREEN_HEIGHT],
+            framebuffer: [0; 256 * 240],
             paused: true,
             busy: false,
             js_ctx,
@@ -287,17 +287,8 @@ impl PinkyWeb {
                         framebuffer.byteOffset,
                         framebuffer.byteLength
                     );
-                    h.gl.texSubImage2D(
-                        h.gl.TEXTURE_2D,
-                        0,
-                        0,
-                        0,
-                        SCREEN_WIDTH,
-                        SCREEN_HEIGHT,
-                        h.gl.RGBA,
-                        h.gl.UNSIGNED_BYTE,
-                        data
-                     );
+                    h.gl.texSubImage2D( h.gl.TEXTURE_2D,
+                         0, 0, 0, 256, 240, h.gl.RGBA, h.gl.UNSIGNED_BYTE, data );
                     h.gl.drawElements( h.gl.TRIANGLES, 6, h.gl.UNSIGNED_SHORT, 0 );
                 } else {
                     h.buffer.set( framebuffer );
