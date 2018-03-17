@@ -16,7 +16,7 @@ This is a fork of https://github.com/koute/pinky which I (Ryan1729) have "stripp
 
 4. Build it:
 
-       $ cargo web start --target-webasm --release
+       $ cargo web start --target wasm32-unknown-unknown --release
 
 5. Visit `http://localhost:8000` with your browser.
 

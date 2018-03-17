@@ -189,7 +189,7 @@ fn setup_webgl(canvas: &Element) -> Value {
 
 impl State {
     pub fn new() -> State {
-        let mut framebuffer = Framebuffer::new();
+        let framebuffer = Framebuffer::new();
 
         State {
             framebuffer,
