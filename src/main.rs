@@ -187,46 +187,6 @@ fn setup_webgl(canvas: &Element) -> Value {
     )
 }
 
-impl State {
-    pub fn new() -> State {
-        let framebuffer = Framebuffer::new();
-
-        State {
-            framebuffer,
-            gamepad: Button::Ty::empty(),
-            game_state: GameState::new(),
-        }
-    }
-
-    pub fn framebuffer(&self, framebuffer: &mut [u32; 256 * 240]) {
-        for (pixel_in, pixel_out) in self.framebuffer.buffer.iter().zip(framebuffer.iter_mut()) {
-            let r = Self::beside(((pixel_in & 0x000F) >> 0) as u32);
-            let g = Self::beside(((pixel_in & 0x00F0) >> 4) as u32);
-            let b = Self::beside(((pixel_in & 0x0F00) >> 8) as u32);
-            let a = Self::beside(((pixel_in & 0xF000) >> 12) as u32);
-
-            *pixel_out = r | g << 8 | b << 16 | a << 24
-        }
-    }
-
-    #[inline]
-    fn beside(x: u32) -> u32 {
-        x | x << 4
-    }
-
-    pub fn frame(&mut self) {
-        update_and_render(&mut self.game_state, &mut self.framebuffer, self.gamepad);
-    }
-
-    pub fn press(&mut self, button: Button::Ty) {
-        self.gamepad.insert(button);
-    }
-
-    pub fn release(&mut self, button: Button::Ty) {
-        self.gamepad.remove(button);
-    }
-}
-
 struct PinkyWeb {
     state: State,
     framebuffer: [u32; 256 * 240],
@@ -380,6 +340,20 @@ impl PinkyWeb {
         } else {
             self.state.release(button);
         }
+    }
+}
+
+impl State {
+    pub fn frame(&mut self) {
+        update_and_render(&mut self.game_state, &mut self.framebuffer, self.gamepad);
+    }
+
+    pub fn press(&mut self, button: Button::Ty) {
+        self.gamepad.insert(button);
+    }
+
+    pub fn release(&mut self, button: Button::Ty) {
+        self.gamepad.remove(button);
     }
 }
 
