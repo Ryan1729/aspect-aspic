@@ -29,7 +29,7 @@ pub fn update_and_render(
         state.y = state.y.wrapping_add(1);
     }
 
-    // framebuffer.rainbow(state.x, state.y);
+    framebuffer.clear();
 
     framebuffer.draw_rect(state.x, state.y, CELL_WIDTH, CELL_HEIGHT, BLUE);
 }

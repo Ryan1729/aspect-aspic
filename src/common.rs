@@ -35,9 +35,9 @@ impl Framebuffer {
         }
     }
 
-    pub fn rainbow(&mut self, x: usize, y: usize) {
+    pub fn clear(&mut self) {
         for i in 0..self.buffer.len() {
-            self.buffer[i] = (i + x - (y * 2)) as _;
+            self.buffer[i] = 0;
         }
     }
 }
