@@ -1,3 +1,9 @@
+//in pixels
+pub const SCREEN_WIDTH: usize = 256;
+pub const SCREEN_WIDTH_f64: f64 = 256.0;
+pub const SCREEN_HEIGHT: usize = 240;
+pub const SCREEN_HEIGHT_f64: f64 = 240.0;
+
 pub struct Framebuffer {
     pub buffer: Vec<u16>,
 }
@@ -28,6 +34,22 @@ impl Default for Framebuffer {
         buffer.resize(256 * 240, 0);
 
         Framebuffer { buffer }
+    }
+}
+
+pub struct GameState {
+    pub x: u8,
+    pub y: u8,
+    pub board: Board,
+}
+
+impl GameState {
+    pub fn new() -> GameState {
+        let x = 128;
+        let y = 120;
+        let board = [None; BOARD_LENGTH];
+
+        GameState { x, y, board }
     }
 }
 
@@ -81,16 +103,86 @@ pub mod Button {
     }
 }
 
-pub struct GameState {
-    pub x: u8,
-    pub y: u8,
+type Piece = bool;
+
+//in pixels
+pub const CELL_WIDTH: usize = SCREEN_WIDTH / 20;
+pub const CELL_HEIGHT: usize = SCREEN_HEIGHT / 20;
+pub const HUD_WIDTH: usize = 40;
+
+//in cells
+pub const BOARD_WIDTH: usize = (SCREEN_WIDTH - HUD_WIDTH) / CELL_WIDTH;
+pub const BOARD_HEIGHT: usize = SCREEN_HEIGHT / CELL_HEIGHT;
+pub const BOARD_LENGTH: usize = BOARD_WIDTH * BOARD_HEIGHT;
+
+pub type Board = [Option<Piece>; BOARD_LENGTH];
+
+pub fn get_board_index(x: usize, y: usize) -> Option<usize> {
+    if !xy_on_board(x, y) {
+        return None;
+    }
+
+    let result = y.saturating_mul(BOARD_WIDTH).saturating_add(x);
+
+    if is_index_on_board(result) {
+        Some(result)
+    } else {
+        None
+    }
 }
 
-impl GameState {
-    pub fn new() -> GameState {
-        let x = 128;
-        let y = 120;
-
-        GameState { x, y }
+pub fn get_board_xy(index: usize) -> Option<(usize, usize)> {
+    if !is_index_on_board(index) {
+        return None;
     }
+
+    let result = (index % BOARD_WIDTH, index / BOARD_WIDTH);
+
+    if xy_on_board(result.0, result.1) {
+        Some(result)
+    } else {
+        None
+    }
+}
+
+#[cfg(test)]
+#[macro_use]
+extern crate quickcheck;
+
+#[cfg(test)]
+mod board_indices {
+    use ::*;
+
+    quickcheck! {
+        fn i_xy_i(i: usize) -> bool {
+              let expected = if is_index_on_board(i) {
+                  Some(i)
+              } else {
+                  None
+              };
+
+              expected == get_board_xy(i).and_then(|(x,y)| get_board_index(x,y))
+        }
+    }
+
+    quickcheck! {
+        fn xy_i_xy(x: usize, y: usize) -> bool {
+             let expected = if xy_on_board(x, y) {
+                 Some((x, y))
+             } else {
+                 None
+             };
+
+             expected == get_board_index(x,y).and_then(|i| get_board_xy(i))
+        }
+    }
+
+}
+
+fn is_index_on_board(piece_index: usize) -> bool {
+    piece_index < BOARD_LENGTH
+}
+
+fn xy_on_board(x: usize, y: usize) -> bool {
+    x < BOARD_WIDTH && y < BOARD_HEIGHT
 }

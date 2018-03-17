@@ -7,6 +7,7 @@ authors = ["Ryan Wiedemann <Ryan1729@gmail.com>"]
 serde = "1"
 serde_derive = "1"
 bitflags = "0.7"
+quickcheck = "0.6"
 
 [dependencies.stdweb]
 version = "0.3"
