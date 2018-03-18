@@ -3,7 +3,7 @@ pub const SCREEN_WIDTH: usize = 256;
 pub const SCREEN_HEIGHT: usize = 240;
 
 pub struct Framebuffer {
-    pub buffer: Vec<u16>,
+    pub buffer: Vec<u32>,
 }
 
 impl PartialEq for Framebuffer {
@@ -19,7 +19,7 @@ impl Framebuffer {
         Framebuffer::default()
     }
 
-    pub fn draw_rect(&mut self, x: usize, y: usize, width: usize, height: usize, colour: u16) {
+    pub fn draw_rect(&mut self, x: usize, y: usize, width: usize, height: usize, colour: u32) {
         let one_past_right_edge = x + width;
         let one_past_bottom_edge = y + height;
 
@@ -86,12 +86,7 @@ impl State {
 
     pub fn framebuffer(&self, framebuffer: &mut [u32; 256 * 240]) {
         for (pixel_in, pixel_out) in self.framebuffer.buffer.iter().zip(framebuffer.iter_mut()) {
-            let r = Self::beside(((pixel_in & 0x000F) >> 0) as u32);
-            let g = Self::beside(((pixel_in & 0x00F0) >> 4) as u32);
-            let b = Self::beside(((pixel_in & 0x0F00) >> 8) as u32);
-            let a = Self::beside(((pixel_in & 0xF000) >> 12) as u32);
-
-            *pixel_out = r | g << 8 | b << 16 | a << 24
+            *pixel_out = *pixel_in;
         }
     }
 

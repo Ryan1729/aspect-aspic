@@ -3,7 +3,7 @@ use common::Framebuffer;
 use common::Button;
 use common::{CELL_HEIGHT, CELL_WIDTH};
 
-const BLUE: u16 = 0xFE22;
+const BLUE: u32 = 0xFFEE2222;
 //const GREEN: u16 = 0xF2E2;
 //const RED: u16 = 0xF22E;
 
