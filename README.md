@@ -24,7 +24,7 @@ This is a fork of https://github.com/koute/pinky which I (Ryan1729) have "stripp
 
 ### Building for other backends
 
-Replace `--target-webasm` with `--target-webasm-emscripten` or `--target-asmjs-emscripten`
+Replace `--target-webasm` with `--target wasm32-unknown-emscripten` or `--target asmjs-unknown-emscripten`
 if you want to build it using another backend. You will also have to install the
 corresponding targets with `rustup` - `wasm32-unknown-emscripten` and `asmjs-unknown-emscripten`
 respectively.
