@@ -45,7 +45,7 @@ impl Framebuffer {
 impl Default for Framebuffer {
     fn default() -> Self {
         let mut buffer = Vec::new();
-        buffer.resize(256 * 240, 0);
+        buffer.resize(SCREEN_WIDTH * SCREEN_HEIGHT, 0);
 
         Framebuffer { buffer }
     }
@@ -83,17 +83,6 @@ impl State {
             game_state: GameState::new(),
         }
     }
-
-    pub fn framebuffer(&self, framebuffer: &mut [u32; 256 * 240]) {
-        for (pixel_in, pixel_out) in self.framebuffer.buffer.iter().zip(framebuffer.iter_mut()) {
-            *pixel_out = *pixel_in;
-        }
-    }
-
-    #[inline]
-    fn beside(x: u32) -> u32 {
-        x | x << 4
-    }
 }
 
 // These values are deliberately picked to be the same as the ones in NES' input registers.
@@ -125,7 +114,7 @@ pub const BOARD_HEIGHT: usize = SCREEN_HEIGHT / CELL_HEIGHT;
 pub const BOARD_LENGTH: usize = BOARD_WIDTH * BOARD_HEIGHT;
 
 pub type Board = [Option<Piece>; BOARD_LENGTH];
-
+#[allow(dead_code)]
 pub fn get_board_index(x: usize, y: usize) -> Option<usize> {
     if !xy_on_board(x, y) {
         return None;

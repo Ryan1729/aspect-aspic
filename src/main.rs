@@ -190,7 +190,6 @@ fn setup_webgl(canvas: &Element) -> Value {
 
 struct PinkyWeb {
     state: State,
-    framebuffer: [u32; 256 * 240],
     paused: bool,
     busy: bool,
     js_ctx: Value,
@@ -227,7 +226,6 @@ impl PinkyWeb {
 
         PinkyWeb {
             state: State::new(),
-            framebuffer: [0; 256 * 240],
             paused: true,
             busy: false,
             js_ctx,
@@ -274,12 +272,10 @@ impl PinkyWeb {
 
     fn draw(&mut self) {
         if !self.paused {
-            self.state.framebuffer(&mut self.framebuffer);
-
             js! {
                 var h = @{&self.js_ctx};
                 var framebuffer = @{unsafe {
-                    UnsafeTypedArray::new( &self.framebuffer )
+                    UnsafeTypedArray::new( &self.state.framebuffer.buffer )
                  }};
                 if( h.gl ) {
                     var data = new Uint8Array(
