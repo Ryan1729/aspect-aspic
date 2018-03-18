@@ -52,18 +52,41 @@ impl Default for Framebuffer {
 }
 
 pub struct GameState {
-    pub x: usize,
-    pub y: usize,
-    pub board: Board,
+    pub entities: [Component::Ty; GameState::ENTITY_COUNT],
+
+    pub positions: [(u8, u8); GameState::ENTITY_COUNT],
 }
 
 impl GameState {
-    pub fn new() -> GameState {
-        let x = 128;
-        let y = 120;
-        let board = [None; BOARD_LENGTH];
+    pub const ENTITY_COUNT: usize = 256;
 
-        GameState { x, y, board }
+    pub fn new() -> GameState {
+        let mut entities = [Component::Ty::empty(); GameState::ENTITY_COUNT];
+
+        let playerId = 0;
+
+        entities[playerId] = Component::Position
+            | Component::Appearance
+            | Component::PlayerControlled;
+
+        let mut positions = [(0, 0); GameState::ENTITY_COUNT];
+
+        positions[playerId] = (5, 5);
+
+        GameState {
+            entities,
+            positions
+        }
+    }
+}
+
+pub mod Component {
+    bitflags! {
+        pub flags Ty: u16 {
+            const Position         = 1 << 0,
+            const Appearance       = 1 << 1,
+            const PlayerControlled = 1 << 2,
+        }
     }
 }
 

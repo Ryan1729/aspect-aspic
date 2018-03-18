@@ -2,10 +2,11 @@ use common::GameState;
 use common::Framebuffer;
 use common::Button;
 use common::{CELL_HEIGHT, CELL_WIDTH};
+use common::Component;
 
 const BLUE: u32 = 0xFFEE2222;
-//const GREEN: u16 = 0xF2E2;
-//const RED: u16 = 0xF22E;
+const GREEN: u32 = 0xFF22E22;
+const RED: u32 = 0xFF2222EE;
 
 #[inline]
 pub fn update_and_render(
@@ -13,23 +14,43 @@ pub fn update_and_render(
     framebuffer: &mut Framebuffer,
     gamepad: Button::Ty,
 ) {
-    if gamepad.contains(Button::Left) {
-        state.x = state.x.wrapping_sub(1);
-    }
+    for i in 0..GameState::ENTITY_COUNT {
+        let entity = state.entities[i];
+        if entity.contains(Component::PlayerControlled) {
+            let (mut x, mut y) = state.positions[i];
 
-    if gamepad.contains(Button::Right) {
-        state.x = state.x.wrapping_add(1);
-    }
+            if gamepad.contains(Button::Left) {
+                x = x.wrapping_sub(1);
+            }
 
-    if gamepad.contains(Button::Up) {
-        state.y = state.y.wrapping_sub(1);
-    }
+            if gamepad.contains(Button::Right) {
+                x = x.wrapping_add(1);
+            }
 
-    if gamepad.contains(Button::Down) {
-        state.y = state.y.wrapping_add(1);
+            if gamepad.contains(Button::Up) {
+                y = y.wrapping_sub(1);
+            }
+
+            if gamepad.contains(Button::Down) {
+                y = y.wrapping_add(1);
+            }
+
+            state.positions[i] = (x, y);
+        }
     }
 
     framebuffer.clear();
 
-    framebuffer.draw_rect(state.x, state.y, CELL_WIDTH, CELL_HEIGHT, BLUE);
+    for i in 0..GameState::ENTITY_COUNT {
+        let entity = state.entities[i];
+        if entity.contains(Component::Position | Component::Appearance) {
+            let (x, y) = state.positions[i];
+
+
+
+            framebuffer.draw_rect(x as _, y as _, CELL_WIDTH, CELL_HEIGHT, BLUE);
+        }
+    }
+
+
 }
