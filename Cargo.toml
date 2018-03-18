@@ -8,9 +8,8 @@ serde = "1"
 serde_derive = "1"
 bitflags = "0.7"
 quickcheck = "0.6"
+stdweb = "0.4"
 
-[dependencies.stdweb]
-version = "0.3"
 
 [profile.dev]
 opt-level = 2

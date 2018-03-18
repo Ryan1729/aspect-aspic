@@ -12,9 +12,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::error::Error;
 
-use stdweb::web::{self, Element, IElement, IEventTarget, INode};
-
-use stdweb::web::event::{IEvent, IKeyboardEvent, KeyboardLocation, KeydownEvent, KeyupEvent};
+use stdweb::web::{self, Element, IElement, IEventTarget, INode, INonElementParentNode};
+use stdweb::web::event::{IEvent, IKeyboardEvent, KeyboardLocation, KeyDownEvent, KeyUpEvent};
 
 use stdweb::{UnsafeTypedArray, Value};
 
@@ -396,7 +395,8 @@ fn show(id: &str) {
         .get_element_by_id(id)
         .unwrap()
         .class_list()
-        .remove("hidden");
+        .remove("hidden")
+        .unwrap();
 }
 
 fn hide(id: &str) {
@@ -404,18 +404,19 @@ fn hide(id: &str) {
         .get_element_by_id(id)
         .unwrap()
         .class_list()
-        .add("hidden");
+        .add("hidden")
+        .unwrap();
 }
 
 fn support_input(pinky: Rc<RefCell<PinkyWeb>>) {
-    web::window().add_event_listener(enclose!( [pinky] move |event: KeydownEvent| {
+    web::window().add_event_listener(enclose!( [pinky] move |event: KeyDownEvent| {
         let handled = pinky.borrow_mut().on_key( &event.key(), event.location(), true );
         if handled {
             event.prevent_default();
         }
     }));
 
-    web::window().add_event_listener(enclose!( [pinky] move |event: KeyupEvent| {
+    web::window().add_event_listener(enclose!( [pinky] move |event: KeyUpEvent| {
         let handled = pinky.borrow_mut().on_key( &event.key(), event.location(), false );
         if handled {
             event.prevent_default();
