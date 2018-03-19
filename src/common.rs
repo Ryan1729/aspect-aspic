@@ -66,7 +66,7 @@ impl GameState {
     pub fn new() -> GameState {
         let mut entities = [Component::Ty::empty(); GameState::ENTITY_COUNT];
         let mut positions = [(0, 0); GameState::ENTITY_COUNT];
-        let mut appearances = [Appearance::empty(); GameState::ENTITY_COUNT];
+        let mut appearances = [Appearance::default(); GameState::ENTITY_COUNT];
 
         {
             let mut i = 0;
@@ -101,6 +101,9 @@ pub mod Component {
             const Position         = 1 << 0,
             const Appearance       = 1 << 1,
             const PlayerControlled = 1 << 2,
+            const Player = Position.bits
+             | Appearance.bits
+             | PlayerControlled.bits,
         }
     }
 }
@@ -110,39 +113,64 @@ pub const GREEN: u32 = 0xFF22EE22;
 pub const RED: u32 = 0xFF2222EE;
 pub const FLOOR: u32 = 0xFF104010;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct Appearance {
     pub colour: u32,
     pub shape: Shape,
+    pub x_off: isize,
+    pub y_off: isize,
+}
+
+pub fn offset_by(value: usize, offset: isize) -> usize {
+    if offset > 0 {
+        value.saturating_add(offset as usize)
+    } else {
+        value.saturating_sub(offset.abs() as usize)
+    }
 }
 
 impl Appearance {
-    fn empty() -> Self {
-        Appearance {
-            colour: 0,
-            shape: Shape::FullCell,
-        }
-    }
-
     pub fn render_positioned(&self, framebuffer: &mut Framebuffer, (x, y): Position) {
-        let px_x = cell_x_to_px_x(x as usize);
-        let px_y = cell_y_to_px_y(y as usize);
+        let px_x = offset_by(cell_x_to_px_x(x as usize), self.x_off);
+        let px_y = offset_by(cell_y_to_px_y(y as usize), self.y_off);
 
         let colour = self.colour;
 
         match self.shape {
             Shape::FullCell => {
-                framebuffer.draw_rect(px_x as _, px_y as _, CELL_WIDTH, CELL_HEIGHT, colour);
+                framebuffer.draw_rect(px_x, px_y, CELL_WIDTH, CELL_HEIGHT, colour);
             }
             Shape::Player => {
                 framebuffer.draw_rect(
-                    (px_x as usize).saturating_add(4),
-                    (px_y as usize).saturating_add(4),
+                    px_x.saturating_add(4),
+                    px_y.saturating_add(4),
                     CELL_WIDTH.saturating_sub(8),
                     CELL_HEIGHT.saturating_sub(6),
                     colour,
                 );
             }
+        }
+    }
+
+    pub fn is_offset(&self) -> bool {
+        self.x_off != 0 || self.y_off != 0
+    }
+
+    pub fn reduce_offset(&mut self, offset: isize) {
+        if self.x_off > 0 {
+            self.x_off -= offset;
+        } else if self.x_off < 0 {
+            self.x_off += offset;
+        } else {
+            //do nothing
+        }
+
+        if self.y_off > 0 {
+            self.y_off -= offset;
+        } else if self.y_off < 0 {
+            self.y_off += offset;
+        } else {
+            //do nothing
         }
     }
 }
@@ -151,6 +179,12 @@ impl Appearance {
 pub enum Shape {
     FullCell,
     Player,
+}
+
+impl Default for Shape {
+    fn default() -> Self {
+        Shape::FullCell
+    }
 }
 
 pub struct State {
