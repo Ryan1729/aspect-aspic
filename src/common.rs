@@ -68,23 +68,29 @@ impl GameState {
         let mut positions = [(0, 0); GameState::ENTITY_COUNT];
         let mut appearances = [Appearance::empty(); GameState::ENTITY_COUNT];
 
-        for i in 0..GameState::ENTITY_COUNT {
-            entities[i].insert(Component::Position | Component::Appearance);
-            if let Some(pos) = get_board_xy(i) {
+        {
+            let mut i = 0;
+            while let Some(pos) = get_board_xy(i) {
+                entities[i].insert(Component::Position | Component::Appearance);
                 positions[i] = pos;
+                appearances[i].colour = FLOOR;
+
+                i += 1;
             }
-            appearances[i].colour = GREEN;
         }
 
-        let playerId = 24;
+        let playerId = BOARD_LENGTH;
 
-        entities[playerId] |= Component::PlayerControlled;
+        entities[playerId] |=
+            Component::PlayerControlled | Component::Position | Component::Appearance;
+        positions[playerId] = get_board_xy(playerId).unwrap_or((0, 0));
         appearances[playerId].colour = BLUE;
+        appearances[playerId].shape = Shape::Player;
 
         GameState {
             entities,
             positions,
-            appearances
+            appearances,
         }
     }
 }
@@ -102,16 +108,19 @@ pub mod Component {
 pub const BLUE: u32 = 0xFFEE2222;
 pub const GREEN: u32 = 0xFF22EE22;
 pub const RED: u32 = 0xFF2222EE;
+pub const FLOOR: u32 = 0xFF104010;
 
 #[derive(Clone, Copy)]
 pub struct Appearance {
     pub colour: u32,
+    pub shape: Shape,
 }
 
 impl Appearance {
     fn empty() -> Self {
         Appearance {
             colour: 0,
+            shape: Shape::FullCell,
         }
     }
 
@@ -121,8 +130,27 @@ impl Appearance {
 
         let colour = self.colour;
 
-        framebuffer.draw_rect(px_x as _, px_y as _, CELL_WIDTH, CELL_HEIGHT, colour);
+        match self.shape {
+            Shape::FullCell => {
+                framebuffer.draw_rect(px_x as _, px_y as _, CELL_WIDTH, CELL_HEIGHT, colour);
+            }
+            Shape::Player => {
+                framebuffer.draw_rect(
+                    (px_x as usize).saturating_add(4),
+                    (px_y as usize).saturating_add(4),
+                    CELL_WIDTH.saturating_sub(8),
+                    CELL_HEIGHT.saturating_sub(6),
+                    colour,
+                );
+            }
+        }
     }
+}
+
+#[derive(Clone, Copy)]
+pub enum Shape {
+    FullCell,
+    Player,
 }
 
 pub struct State {
@@ -187,7 +215,10 @@ pub fn get_board_xy(index: usize) -> Option<(BoardCoord, BoardCoord)> {
         return None;
     }
 
-    let result = (index as BoardCoord % BOARD_WIDTH, index as BoardCoord / BOARD_WIDTH);
+    let result = (
+        index as BoardCoord % BOARD_WIDTH,
+        index as BoardCoord / BOARD_WIDTH,
+    );
 
     if xy_on_board(result.0, result.1) {
         Some(result)
@@ -243,10 +274,10 @@ pub const CELL_WIDTH: usize = 32;
 pub const CELL_HEIGHT: usize = 32;
 
 pub fn cell_x_to_px_x(x: usize) -> usize {
-     x * (CELL_WIDTH + 1) + 1
+    x * (CELL_WIDTH + 1) + 1
 }
 pub fn cell_y_to_px_y(y: usize) -> usize {
-     y * (CELL_HEIGHT + 1) + 1
+    y * (CELL_HEIGHT + 1) + 1
 }
 
 //A spacer pixel after the last cell.
