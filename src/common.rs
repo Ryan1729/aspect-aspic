@@ -51,10 +51,12 @@ impl Default for Framebuffer {
     }
 }
 
+pub type Position = (BoardCoord, BoardCoord);
+
 pub struct GameState {
     pub entities: [Component::Ty; GameState::ENTITY_COUNT],
 
-    pub positions: [(BoardCoord, BoardCoord); GameState::ENTITY_COUNT],
+    pub positions: [Position; GameState::ENTITY_COUNT],
     pub appearances: [Appearance; GameState::ENTITY_COUNT],
 }
 
@@ -112,6 +114,15 @@ impl Appearance {
             colour: 0,
         }
     }
+
+    pub fn render_positioned(&self, framebuffer: &mut Framebuffer, (x, y): Position) {
+        let px_x = cell_x_to_px_x(x as usize);
+        let px_y = cell_y_to_px_y(y as usize);
+
+        let colour = self.colour;
+
+        framebuffer.draw_rect(px_x as _, px_y as _, CELL_WIDTH, CELL_HEIGHT, colour);
+    }
 }
 
 pub struct State {
@@ -156,6 +167,7 @@ pub const BOARD_HEIGHT: BoardCoord = 6;
 
 pub const BOARD_LENGTH: usize = BOARD_WIDTH as usize * BOARD_HEIGHT as usize;
 
+#[allow(dead_code)]
 pub fn get_board_index(x: BoardCoord, y: BoardCoord) -> Option<usize> {
     if !xy_on_board(x, y) {
         return None;

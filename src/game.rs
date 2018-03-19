@@ -36,14 +36,10 @@ pub fn update_and_render(
     for i in 0..GameState::ENTITY_COUNT {
         let entity = state.entities[i];
         if entity.contains(Component::Position | Component::Appearance) {
-            let (x, y) = state.positions[i];
+            let pos = state.positions[i];
 
-            let px_x = cell_x_to_px_x(x as usize);
-            let px_y = cell_y_to_px_y(y as usize);
-
-            let colour = state.appearances[i].colour;
-
-            framebuffer.draw_rect(px_x as _, px_y as _, CELL_WIDTH, CELL_HEIGHT, colour);
+            let appearance = &mut state.appearances[i];
+            appearance.render_positioned(framebuffer, pos);
         }
     }
 
