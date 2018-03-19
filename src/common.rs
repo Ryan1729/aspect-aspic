@@ -54,7 +54,8 @@ impl Default for Framebuffer {
 pub struct GameState {
     pub entities: [Component::Ty; GameState::ENTITY_COUNT],
 
-    pub positions: [(u8, u8); GameState::ENTITY_COUNT],
+    pub positions: [(BoardCoord, BoardCoord); GameState::ENTITY_COUNT],
+    pub appearances: [Appearance; GameState::ENTITY_COUNT],
 }
 
 impl GameState {
@@ -62,20 +63,26 @@ impl GameState {
 
     pub fn new() -> GameState {
         let mut entities = [Component::Ty::empty(); GameState::ENTITY_COUNT];
-
-        let playerId = 0;
-
-        entities[playerId] = Component::Position
-            | Component::Appearance
-            | Component::PlayerControlled;
-
         let mut positions = [(0, 0); GameState::ENTITY_COUNT];
+        let mut appearances = [Appearance::empty(); GameState::ENTITY_COUNT];
 
-        positions[playerId] = (5, 5);
+        for i in 0..GameState::ENTITY_COUNT {
+            entities[i].insert(Component::Position | Component::Appearance);
+            if let Some(pos) = get_board_xy(i) {
+                positions[i] = pos;
+            }
+            appearances[i].colour = GREEN;
+        }
+
+        let playerId = 24;
+
+        entities[playerId] |= Component::PlayerControlled;
+        appearances[playerId].colour = BLUE;
 
         GameState {
             entities,
-            positions
+            positions,
+            appearances
         }
     }
 }
@@ -86,6 +93,23 @@ pub mod Component {
             const Position         = 1 << 0,
             const Appearance       = 1 << 1,
             const PlayerControlled = 1 << 2,
+        }
+    }
+}
+
+pub const BLUE: u32 = 0xFFEE2222;
+pub const GREEN: u32 = 0xFF22EE22;
+pub const RED: u32 = 0xFF2222EE;
+
+#[derive(Clone, Copy)]
+pub struct Appearance {
+    pub colour: u32,
+}
+
+impl Appearance {
+    fn empty() -> Self {
+        Appearance {
+            colour: 0,
         }
     }
 }
@@ -124,26 +148,20 @@ pub mod Button {
     }
 }
 
-type Piece = bool;
-
-//in pixels
-pub const CELL_WIDTH: usize = SCREEN_WIDTH / 20;
-pub const CELL_HEIGHT: usize = SCREEN_HEIGHT / 20;
-pub const HUD_WIDTH: usize = 40;
+pub type BoardCoord = u8;
 
 //in cells
-pub const BOARD_WIDTH: usize = (SCREEN_WIDTH - HUD_WIDTH) / CELL_WIDTH;
-pub const BOARD_HEIGHT: usize = SCREEN_HEIGHT / CELL_HEIGHT;
-pub const BOARD_LENGTH: usize = BOARD_WIDTH * BOARD_HEIGHT;
+pub const BOARD_WIDTH: BoardCoord = 6;
+pub const BOARD_HEIGHT: BoardCoord = 6;
 
-pub type Board = [Option<Piece>; BOARD_LENGTH];
-#[allow(dead_code)]
-pub fn get_board_index(x: usize, y: usize) -> Option<usize> {
+pub const BOARD_LENGTH: usize = BOARD_WIDTH as usize * BOARD_HEIGHT as usize;
+
+pub fn get_board_index(x: BoardCoord, y: BoardCoord) -> Option<usize> {
     if !xy_on_board(x, y) {
         return None;
     }
 
-    let result = y.saturating_mul(BOARD_WIDTH).saturating_add(x);
+    let result = (y.saturating_mul(BOARD_WIDTH).saturating_add(x)) as usize;
 
     if is_index_on_board(result) {
         Some(result)
@@ -151,13 +169,13 @@ pub fn get_board_index(x: usize, y: usize) -> Option<usize> {
         None
     }
 }
-#[allow(dead_code)]
-pub fn get_board_xy(index: usize) -> Option<(usize, usize)> {
+
+pub fn get_board_xy(index: usize) -> Option<(BoardCoord, BoardCoord)> {
     if !is_index_on_board(index) {
         return None;
     }
 
-    let result = (index % BOARD_WIDTH, index / BOARD_WIDTH);
+    let result = (index as BoardCoord % BOARD_WIDTH, index as BoardCoord / BOARD_WIDTH);
 
     if xy_on_board(result.0, result.1) {
         Some(result)
@@ -187,7 +205,7 @@ mod board_indices {
     }
 
     quickcheck! {
-        fn xy_i_xy(x: usize, y: usize) -> bool {
+        fn xy_i_xy(x: BoardCoord, y: BoardCoord) -> bool {
              let expected = if xy_on_board(x, y) {
                  Some((x, y))
              } else {
@@ -204,6 +222,21 @@ fn is_index_on_board(piece_index: usize) -> bool {
     piece_index < BOARD_LENGTH
 }
 
-fn xy_on_board(x: usize, y: usize) -> bool {
+fn xy_on_board(x: BoardCoord, y: BoardCoord) -> bool {
     x < BOARD_WIDTH && y < BOARD_HEIGHT
 }
+
+//in pixels
+pub const CELL_WIDTH: usize = 32;
+pub const CELL_HEIGHT: usize = 32;
+
+pub fn cell_x_to_px_x(x: usize) -> usize {
+     x * (CELL_WIDTH + 1) + 1
+}
+pub fn cell_y_to_px_y(y: usize) -> usize {
+     y * (CELL_HEIGHT + 1) + 1
+}
+
+//A spacer pixel after the last cell.
+pub const HUD_LEFT_EDGE: usize = ((BOARD_WIDTH as usize) * (CELL_WIDTH + 1) + 1) + 1;
+pub const HUD_WIDTH: usize = SCREEN_WIDTH - HUD_LEFT_EDGE;

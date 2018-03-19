@@ -1,12 +1,4 @@
-use common::GameState;
-use common::Framebuffer;
-use common::Button;
-use common::{CELL_HEIGHT, CELL_WIDTH};
-use common::Component;
-
-const BLUE: u32 = 0xFFEE2222;
-const GREEN: u32 = 0xFF22E22;
-const RED: u32 = 0xFF2222EE;
+use common::*;
 
 #[inline]
 pub fn update_and_render(
@@ -46,11 +38,14 @@ pub fn update_and_render(
         if entity.contains(Component::Position | Component::Appearance) {
             let (x, y) = state.positions[i];
 
+            let px_x = cell_x_to_px_x(x as usize);
+            let px_y = cell_y_to_px_y(y as usize);
 
+            let colour = state.appearances[i].colour;
 
-            framebuffer.draw_rect(x as _, y as _, CELL_WIDTH, CELL_HEIGHT, BLUE);
+            framebuffer.draw_rect(px_x as _, px_y as _, CELL_WIDTH, CELL_HEIGHT, colour);
         }
     }
 
-
+    framebuffer.draw_rect(HUD_LEFT_EDGE, 0, HUD_WIDTH, SCREEN_HEIGHT, 0xFF333333);
 }
