@@ -13,7 +13,7 @@ use std::rc::Rc;
 use std::error::Error;
 
 use stdweb::web::{self, Element, IElement, IEventTarget, INode, INonElementParentNode};
-use stdweb::web::event::{IEvent, IKeyboardEvent, KeyboardLocation, KeyDownEvent, KeyUpEvent};
+use stdweb::web::event::{IEvent, IKeyboardEvent, KeyDownEvent, KeyUpEvent, KeyboardLocation};
 
 use stdweb::{UnsafeTypedArray, Value};
 
@@ -341,15 +341,17 @@ impl PinkyWeb {
 
 impl State {
     pub fn frame(&mut self) {
-        update_and_render(&mut self.game_state, &mut self.framebuffer, self.gamepad);
+        update_and_render(&mut self.game_state, &mut self.framebuffer, self.input);
+
+        self.input.previous_gamepad = self.input.gamepad;
     }
 
     pub fn press(&mut self, button: Button::Ty) {
-        self.gamepad.insert(button);
+        self.input.gamepad.insert(button);
     }
 
     pub fn release(&mut self, button: Button::Ty) {
-        self.gamepad.remove(button);
+        self.input.gamepad.remove(button);
     }
 }
 

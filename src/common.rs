@@ -188,9 +188,9 @@ impl Default for Shape {
 }
 
 pub struct State {
-    pub framebuffer: Framebuffer,
-    pub gamepad: Button::Ty,
     pub game_state: GameState,
+    pub framebuffer: Framebuffer,
+    pub input: Input,
 }
 
 impl State {
@@ -198,10 +198,29 @@ impl State {
         let framebuffer = Framebuffer::new();
 
         State {
-            framebuffer,
-            gamepad: Button::Ty::empty(),
             game_state: GameState::new(),
+            framebuffer,
+            input: Input::new(),
         }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct Input {
+    pub gamepad: Button::Ty,
+    pub previous_gamepad: Button::Ty,
+}
+
+impl Input {
+    pub fn new() -> Self {
+        Input {
+            gamepad: Button::Ty::empty(),
+            previous_gamepad: Button::Ty::empty(),
+        }
+    }
+
+    pub fn pressed_this_frame(&self, buttons: Button::Ty) -> bool {
+        !self.previous_gamepad.contains(buttons) && self.gamepad.contains(buttons)
     }
 }
 
