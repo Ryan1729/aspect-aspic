@@ -3,6 +3,9 @@
 * Blob : ![pair-circle-blob.png](https://github.com/Ryan1729/aspect-aspic/raw/master/design/pair-circle-blob.png) If bumped into by the player, split into component aspects.
 * Created Orb: ![concentric-orb.png](https://github.com/Ryan1729/aspect-aspic/raw/master/design/concentric-orb.png) Created when the player throws a Charged Orb at a Dead Orb.  When the player bumps into it it is activated, and it's aspects are thrown outwards in the process
 
+___
+
+### Trying out an idea
 
 Taking inspiration from the Magic the Gathering colour pie, Let's try the following aspects:
 
@@ -15,3 +18,8 @@ _ | ![shine-orb.png](https://github.com/Ryan1729/aspect-aspic/raw/master/design/
 Red  | Moves towards nearest other thing | Shoots healing ray towards most injured other | Moves towards most injured other and then heals it | Heals everyone
 White | Stays in the center of it's cell | Moves in coordination with other white creatures to make a symmetrical pattern | pushes / attacks other creatures/orbs to make ***the*** pattern | rearranges everyone into ***the*** pattern
 Black | Moves to the safest place it can | Moves towards where it can be healed | Evaluates White creature situation and moves in accordance with their pattern if White is "in power" | Creates more black orbs/creatures
+
+
+### Problems with this idea
+
+There does not seem to be anything to damage things. Besides the player I suppose? What does that say about the player? Minecraft has a similar thing going on where a forset has rested in possibility space undisturbed until you walk by and the lava lights the whole thing on fire. Similarly you walk by causing a wolf to spawn and attack an also freshly spawned sheep. You the player are a source of suffering. In this hypothetical game though, at least you only would be activly doing the damaging, rather than merely causing suffering by forcing the world to exist. 
