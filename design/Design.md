@@ -1,3 +1,11 @@
+### Goal 
+##### Elevator pitch
+> Recombine aspects to create allies
+
+In addition to the below mechanics, if you combine all N colours you create an entity identical to yourself and instantly win the game.
+
+### Mechanics
+
 * Dead orb : ![shine-orb.png](https://github.com/Ryan1729/aspect-aspic/raw/master/design/shine-orb.png) if left alone slowly recharges turning into...
 * Charged Orb : ![zigzag-orb.png](https://github.com/Ryan1729/aspect-aspic/raw/master/design/zigzag-orb.png) if this moves into another Charged Orb creates a ...
 * Blob : ![pair-circle-blob.png](https://github.com/Ryan1729/aspect-aspic/raw/master/design/pair-circle-blob.png) If bumped into by the player, split into component aspects.
