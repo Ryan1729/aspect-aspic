@@ -30,4 +30,14 @@ Black | Moves to the safest place it can | Moves towards where it can be healed 
 
 ### Problems with this idea
 
-There does not seem to be anything to damage things. Besides the player I suppose? What does that say about the player? Minecraft has a similar thing going on where a forset has rested in possibility space undisturbed until you walk by and the lava lights the whole thing on fire. Similarly you walk by causing a wolf to spawn and attack an also freshly spawned sheep. You the player are a source of suffering. In this hypothetical game though, at least you only would be activly doing the damaging, rather than merely causing suffering by forcing the world to exist. 
+There does not seem to be anything to damage things. Besides the player I suppose? What does that say about the player? Minecraft has a similar thing going on where a forset has rested in possibility space undisturbed until you walk by and the lava lights the whole thing on fire. Similarly you walk by causing a wolf to spawn and attack an also freshly spawned sheep. You the player are a source of suffering. In this hypothetical game though, at least you only would be actively doing the damaging, rather than merely causing suffering by forcing the world to exist. 
+
+
+### Try Again
+
+The goal and mechanics seem alright so far but as mentioned above that attempt had some problems. So your goal as the player is to make something using all the different aspects at once. What are some interesting ways to make that non-trivial? Making some n-1 combinations completly impossible seems to be wasting the possibility space. But maybe that's a price worth paying? If we're going to make some of the n choose n-1 possibilities impossible then shoulod there be a nice pattern to which one are impossible? Or would it be interesting to embrace "dumb" reasons for things to not work? Real life is complicated in ways that don't obviously fit into nice patterns. 
+
+For example:
+* ~~Someone has an idea and starts feverishly working then goes to the bathroom and realizes that the idea they had won't work but another one will!~~ This isn't a great example because it happens at a particular time and place, rather than being a set of rules/laws. 
+
+* [Arrow function syntax in javascript](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Arrow_functions#Syntax) particularly when returning an object literal. This is a better example because it arises within a set of rules, in particular one created by humans. Can this somehow be made to fit in a nice pattern?
