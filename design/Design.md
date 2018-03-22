@@ -41,3 +41,5 @@ For example:
 * ~~Someone has an idea and starts feverishly working then goes to the bathroom and realizes that the idea they had won't work but another one will!~~ This isn't a great example because it happens at a particular time and place, rather than being a set of rules/laws. 
 
 * [Arrow function syntax in javascript](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Arrow_functions#Syntax) particularly when returning an object literal. This is a better example because it arises within a set of rules, in particular one created by humans. Can this somehow be made to fit in a nice pattern?
+
+* Another example is non-consecutive numbering due to delays (other reasons may deserve their own section.) For example see ECMAScript 3.1 and 4 which eventually essentially became 5 and 6 respectively where 4 was never released to avoid confusion.
