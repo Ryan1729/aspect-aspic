@@ -19,15 +19,17 @@ impl Framebuffer {
         Framebuffer::default()
     }
 
+    pub fn xy_to_i(x: usize, y: usize) -> usize {
+        y.saturating_mul(SCREEN_WIDTH).saturating_add(x)
+    }
+
     pub fn draw_rect(&mut self, x: usize, y: usize, width: usize, height: usize, colour: u32) {
         let one_past_right_edge = x + width;
         let one_past_bottom_edge = y + height;
 
         for current_y in y..one_past_bottom_edge {
             for current_x in x..one_past_right_edge {
-                let i = current_y
-                    .saturating_mul(SCREEN_WIDTH)
-                    .saturating_add(current_x);
+                let i = Framebuffer::xy_to_i(current_x, current_y);
                 if i < self.buffer.len() {
                     self.buffer[i] = colour;
                 }
@@ -39,6 +41,50 @@ impl Framebuffer {
         for i in 0..self.buffer.len() {
             self.buffer[i] = 0;
         }
+    }
+
+    //see http://members.chello.at/~easyfilter/bresenham.html
+    pub fn draw_circle(&mut self, xMid: usize, yMid: usize, radius: usize, colour: u32) {
+        if xMid < radius || yMid < radius {
+            if cfg!(debug_assertions) {
+                console!(log, "draw_circle xMid < radius || yMid < radius");
+            }
+
+            return;
+        }
+        let mut r = radius as isize;
+        let mut x = -r;
+        let mut y = 0isize;
+        let mut err = 2 - 2 * r; /* II. Quadrant */
+        while {
+            self.buffer[Framebuffer::xy_to_i(
+                (xMid as isize - x) as usize,
+                (yMid as isize + y) as usize,
+            )] = colour; /*   I. Quadrant */
+            self.buffer[Framebuffer::xy_to_i(
+                (xMid as isize - y) as usize,
+                (yMid as isize - x) as usize,
+            )] = colour; /*  II. Quadrant */
+            self.buffer[Framebuffer::xy_to_i(
+                (xMid as isize + x) as usize,
+                (yMid as isize - y) as usize,
+            )] = colour; /* III. Quadrant */
+            self.buffer[Framebuffer::xy_to_i(
+                (xMid as isize + y) as usize,
+                (yMid as isize + x) as usize,
+            )] = colour; /*  IV. Quadrant */
+            r = err;
+            if r <= y {
+                y += 1;
+                err += y * 2 + 1; /* e_xy+e_y < 0 */
+            }
+            if r > x || err > y {
+                x += 1;
+                err += x * 2 + 1; /* e_xy+e_x > 0 or no 2nd y-step */
+            }
+
+            x < 0
+        } {}
     }
 }
 
@@ -86,6 +132,13 @@ impl GameState {
         positions[playerId] = get_board_xy(playerId).unwrap_or((0, 0));
         appearances[playerId].colour = BLUE;
         appearances[playerId].shape = Shape::Player;
+
+        let circleId = playerId + 1;
+
+        entities[circleId] |= Component::Position | Component::Appearance;
+        positions[circleId] = get_board_xy(circleId).unwrap_or((0, 0));
+        appearances[circleId].colour = RED;
+        appearances[circleId].shape = Shape::DeadOrb0;
 
         GameState {
             entities,
@@ -149,6 +202,14 @@ impl Appearance {
                     colour,
                 );
             }
+            Shape::DeadOrb0 => {
+                framebuffer.draw_circle(
+                    px_x + CELL_WIDTH / 2,
+                    px_y + CELL_HEIGHT / 2,
+                    CELL_RADIUS,
+                    colour,
+                );
+            }
         }
     }
 
@@ -179,6 +240,7 @@ impl Appearance {
 pub enum Shape {
     FullCell,
     Player,
+    DeadOrb0,
 }
 
 impl Default for Shape {
@@ -325,6 +387,7 @@ fn xy_on_board(x: BoardCoord, y: BoardCoord) -> bool {
 //in pixels
 pub const CELL_WIDTH: usize = 32;
 pub const CELL_HEIGHT: usize = 32;
+pub const CELL_RADIUS: usize = CELL_WIDTH / 2;
 
 pub fn cell_x_to_px_x(x: usize) -> usize {
     x * (CELL_WIDTH + 1) + 1

@@ -14,23 +14,23 @@ pub fn update_and_render(state: &mut GameState, framebuffer: &mut Framebuffer, i
 
             let (mut x, mut y) = state.positions[i];
 
-            if input.pressed_this_frame(Button::Left) {
-                x = x.wrapping_sub(1);
+            if input.pressed_this_frame(Button::Left) && x > 0 {
+                x = x.saturating_sub(1);
                 appearance.x_off = CELL_WIDTH as isize;
             }
 
-            if input.pressed_this_frame(Button::Right) {
-                x = x.wrapping_add(1);
+            if input.pressed_this_frame(Button::Right) && x < BOARD_WIDTH - 1 {
+                x = x.saturating_add(1);
                 appearance.x_off = -(CELL_WIDTH as isize);
             }
 
-            if input.pressed_this_frame(Button::Up) {
-                y = y.wrapping_sub(1);
+            if input.pressed_this_frame(Button::Up) && y > 0 {
+                y = y.saturating_sub(1);
                 appearance.y_off = CELL_WIDTH as isize;
             }
 
-            if input.pressed_this_frame(Button::Down) {
-                y = y.wrapping_add(1);
+            if input.pressed_this_frame(Button::Down) && y < BOARD_HEIGHT - 1 {
+                y = y.saturating_add(1);
                 appearance.y_off = -(CELL_WIDTH as isize);
             }
 
