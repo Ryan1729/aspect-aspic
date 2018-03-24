@@ -44,6 +44,12 @@ macro_rules! colour {
     };
 }
 
+macro_rules! set_alpha {
+    ($colour: expr, $alpha: expr) => {
+        ($colour & 0x00_FF_FF_FF) | $alpha << 24
+    };
+}
+
 impl Framebuffer {
     pub fn new() -> Framebuffer {
         Framebuffer::default()
@@ -74,10 +80,10 @@ impl Framebuffer {
     }
 
     //see http://members.chello.at/~easyfilter/bresenham.html
-    pub fn draw_circle(&mut self, xMid: usize, yMid: usize, radius: usize, colour: u32) {
+    pub fn draw_solid_circle(&mut self, xMid: usize, yMid: usize, radius: usize, colour: u32) {
         if xMid < radius || yMid < radius {
             if cfg!(debug_assertions) {
-                console!(log, "draw_circle xMid < radius || yMid < radius");
+                console!(log, "draw_solid_circle xMid < radius || yMid < radius");
             }
 
             return;
@@ -133,7 +139,7 @@ impl Framebuffer {
     }
 
     //see http://members.chello.at/~easyfilter/bresenham.html
-    pub fn draw_AA_circle(&mut self, xMid: usize, yMid: usize, radius: usize, colour: u32) {
+    pub fn draw_circle(&mut self, xMid: usize, yMid: usize, radius: usize, colour: u32) {
         if xMid < radius || yMid < radius {
             if cfg!(debug_assertions) {
                 console!(log, "draw_circle xMid < radius || yMid < radius");
@@ -141,39 +147,112 @@ impl Framebuffer {
 
             return;
         }
-        let mut r = radius as isize;
-        let mut x = -r;
-        let mut y = 0isize;
-        let mut err = 2 - 2 * r; /* II. Quadrant */
-        while {
-            self.blend(
-                Framebuffer::xy_to_i((xMid as isize - x) as usize, (yMid as isize + y) as usize),
-                (colour & 0x00FFFFFF) | 0x33000000,
-            ); /*   I. Quadrant */
-            self.blend(
-                Framebuffer::xy_to_i((xMid as isize - y) as usize, (yMid as isize - x) as usize),
-                (colour & 0x00FFFFFF) | 0x88000000,
-            ); /*  II. Quadrant */
-            self.blend(
-                Framebuffer::xy_to_i((xMid as isize + x) as usize, (yMid as isize - y) as usize),
-                (colour & 0x00FFFFFF) | 0xBB000000,
-            ); /* III. Quadrant */
-            self.blend(
-                Framebuffer::xy_to_i((xMid as isize + y) as usize, (yMid as isize + x) as usize),
-                (colour & 0x00FFFFFF) | 0xFF000000,
-            ); /*  IV. Quadrant */
-            r = err;
-            if r <= y {
-                y += 1;
-                err += y * 2 + 1; /* e_xy+e_y < 0 */
+        let xm = xMid as isize;
+        let ym = yMid as isize;
+
+        /* II. quadrant from bottom left to top right */
+        let mut x: isize = radius as isize;
+        let mut y: isize = 0;
+
+        let mut alpha;
+
+        /* error of 1.step */
+        let mut err: isize = 2 - 2 * (radius as isize);
+
+        //equivalent to 2 * radius - 1
+        let diameter = 1 - err;
+        loop {
+            /* get blend value of pixel */
+            alpha = 255; // * isize::abs(err + 2 * (x + y) - 2) / diameter;
+
+            {
+                let new_colour = set_alpha!(colour, alpha as u32);
+
+                /*   I. Quadrant */
+                self.blend(
+                    Framebuffer::xy_to_i((xm + x) as usize, (ym - y) as usize),
+                    new_colour,
+                );
+                /*  II. Quadrant */
+                self.blend(
+                    Framebuffer::xy_to_i((xm + y) as usize, (ym + x) as usize),
+                    new_colour,
+                );
+                /* III. Quadrant */
+                self.blend(
+                    Framebuffer::xy_to_i((xm - x) as usize, (ym + y) as usize),
+                    new_colour,
+                );
+                /*  IV. Quadrant */
+                self.blend(
+                    Framebuffer::xy_to_i((xm - y) as usize, (ym - x) as usize),
+                    new_colour,
+                );
             }
-            if r > x || err > y {
-                x += 1;
-                err += x * 2 + 1; /* e_xy+e_x > 0 or no 2nd y-step */
+            if x == 0 {
+                break;
             }
 
-            x < 0
-        } {}
+            /* remember values */
+            let e2 = err;
+            let mut x2 = x;
+
+            /* x step */
+            if err > y {
+                alpha = 255 * (err + 2 * x - 1) / diameter;
+                /* outward pixel */
+                if alpha < 255 {
+                    let new_colour = set_alpha!(colour, alpha as u32);
+
+                    self.blend(
+                        Framebuffer::xy_to_i((xm + x) as usize, (ym - y + 1) as usize),
+                        new_colour,
+                    );
+                    self.blend(
+                        Framebuffer::xy_to_i((xm + y - 1) as usize, (ym + x) as usize),
+                        new_colour,
+                    );
+                    self.blend(
+                        Framebuffer::xy_to_i((xm - x) as usize, (ym + y - 1) as usize),
+                        new_colour,
+                    );
+                    self.blend(
+                        Framebuffer::xy_to_i((xm - y + 1) as usize, (ym - x) as usize),
+                        new_colour,
+                    );
+                }
+                x -= 1;
+                err -= x * 2 - 1;
+            }
+
+            /* y step */
+            if e2 <= x2 {
+                x2 -= 1;
+                alpha = 255 * (1 - 2 * y - e2) / diameter;
+                /* inward pixel */
+                if alpha < 255 {
+                    let new_colour = set_alpha!(colour, alpha as u32);
+                    self.blend(
+                        Framebuffer::xy_to_i((xm + x2) as usize, (ym - y) as usize),
+                        new_colour,
+                    );
+                    self.blend(
+                        Framebuffer::xy_to_i((xm + y) as usize, (ym + x2) as usize),
+                        new_colour,
+                    );
+                    self.blend(
+                        Framebuffer::xy_to_i((xm - x2) as usize, (ym + y) as usize),
+                        new_colour,
+                    );
+                    self.blend(
+                        Framebuffer::xy_to_i((xm - y) as usize, (ym - x2) as usize),
+                        new_colour,
+                    );
+                }
+                y -= 1;
+                err -= y * 2 - 1;
+            }
+        }
     }
 }
 
@@ -228,7 +307,7 @@ impl Appearance {
                 );
             }
             Shape::DeadOrb0 => {
-                framebuffer.draw_AA_circle(
+                framebuffer.draw_circle(
                     px_x + CELL_WIDTH / 2,
                     px_y + CELL_HEIGHT / 2,
                     CELL_RADIUS * 2 / 3,
