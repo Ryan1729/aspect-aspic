@@ -199,8 +199,8 @@ impl Framebuffer {
 
             /* x step */
             if err > y {
-                alpha = 255 * (err + 2 * x - 1) / diameter;
-                /* outward pixel */
+                alpha = 255; // * (err + 2 * x - 1) / diameter;
+                             /* outward pixel */
                 if alpha < 255 {
                     let new_colour = set_alpha!(colour, alpha as u32);
 
@@ -228,8 +228,8 @@ impl Framebuffer {
             /* y step */
             if e2 <= x2 {
                 x2 -= 1;
-                alpha = 255 * (1 - 2 * y - e2) / diameter;
-                /* inward pixel */
+                alpha = 255; // * (1 - 2 * y - e2) / diameter;
+                             /* inward pixel */
                 if alpha < 255 {
                     let new_colour = set_alpha!(colour, alpha as u32);
                     self.blend(
