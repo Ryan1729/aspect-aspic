@@ -14,6 +14,36 @@ impl PartialEq for Framebuffer {
 
 impl Eq for Framebuffer {}
 
+macro_rules! red {
+    ($colour: expr) => {
+        $colour & 0xFF
+    };
+}
+
+macro_rules! green {
+    ($colour: expr) => {
+        ($colour & 0xFF_00) >> 8
+    };
+}
+
+macro_rules! blue {
+    ($colour: expr) => {
+        ($colour & 0xFF_00_00) >> 16
+    };
+}
+
+macro_rules! alpha {
+    ($colour: expr) => {
+        ($colour & 0xFF_00_00_00) >> 24
+    };
+}
+
+macro_rules! colour {
+    ($red: expr, $green: expr, $blue: expr, $alpha: expr) => {
+        $red | $green << 8 | $blue << 16 | $alpha << 24
+    };
+}
+
 impl Framebuffer {
     pub fn new() -> Framebuffer {
         Framebuffer::default()
@@ -86,6 +116,65 @@ impl Framebuffer {
             x < 0
         } {}
     }
+
+    #[inline]
+    //see https://stackoverflow.com/a/12016968/4496839
+    pub fn blend(&mut self, i: usize, colour: u32) {
+        let background = self.buffer[i];
+        let alpha = alpha!(colour) + 1;
+        let inv_alpha = 256 - alpha!(colour);
+
+        self.buffer[i] = colour!(
+            (alpha * red!(colour) + inv_alpha * red!(background)) >> 8,
+            (alpha * green!(colour) + inv_alpha * green!(background)) >> 8,
+            (alpha * blue!(colour) + inv_alpha * blue!(background)) >> 8,
+            0xFF
+        );
+    }
+
+    //see http://members.chello.at/~easyfilter/bresenham.html
+    pub fn draw_AA_circle(&mut self, xMid: usize, yMid: usize, radius: usize, colour: u32) {
+        if xMid < radius || yMid < radius {
+            if cfg!(debug_assertions) {
+                console!(log, "draw_circle xMid < radius || yMid < radius");
+            }
+
+            return;
+        }
+        let mut r = radius as isize;
+        let mut x = -r;
+        let mut y = 0isize;
+        let mut err = 2 - 2 * r; /* II. Quadrant */
+        while {
+            self.blend(
+                Framebuffer::xy_to_i((xMid as isize - x) as usize, (yMid as isize + y) as usize),
+                (colour & 0x00FFFFFF) | 0x33000000,
+            ); /*   I. Quadrant */
+            self.blend(
+                Framebuffer::xy_to_i((xMid as isize - y) as usize, (yMid as isize - x) as usize),
+                (colour & 0x00FFFFFF) | 0x88000000,
+            ); /*  II. Quadrant */
+            self.blend(
+                Framebuffer::xy_to_i((xMid as isize + x) as usize, (yMid as isize - y) as usize),
+                (colour & 0x00FFFFFF) | 0xBB000000,
+            ); /* III. Quadrant */
+            self.blend(
+                Framebuffer::xy_to_i((xMid as isize + y) as usize, (yMid as isize + x) as usize),
+                (colour & 0x00FFFFFF) | 0xFF000000,
+            ); /*  IV. Quadrant */
+            r = err;
+            if r <= y {
+                y += 1;
+                err += y * 2 + 1; /* e_xy+e_y < 0 */
+            }
+            if r > x || err > y {
+                x += 1;
+                err += x * 2 + 1; /* e_xy+e_x > 0 or no 2nd y-step */
+            }
+
+            x < 0
+        } {}
+    }
 }
 
 impl Default for Framebuffer {
@@ -94,6 +183,94 @@ impl Default for Framebuffer {
         buffer.resize(SCREEN_WIDTH * SCREEN_HEIGHT, 0);
 
         Framebuffer { buffer }
+    }
+}
+
+pub const BLUE: u32 = 0xFFEE2222;
+pub const GREEN: u32 = 0xFF22EE22;
+pub const RED: u32 = 0xFF2222EE;
+pub const FLOOR: u32 = 0xFF104010;
+
+#[derive(Clone, Copy, Default)]
+pub struct Appearance {
+    pub colour: u32,
+    pub shape: Shape,
+    pub x_off: isize,
+    pub y_off: isize,
+}
+
+pub fn offset_by(value: usize, offset: isize) -> usize {
+    if offset > 0 {
+        value.saturating_add(offset as usize)
+    } else {
+        value.saturating_sub(offset.abs() as usize)
+    }
+}
+
+impl Appearance {
+    pub fn render_positioned(&self, framebuffer: &mut Framebuffer, (x, y): Position) {
+        let px_x = offset_by(cell_x_to_px_x(x as usize), self.x_off);
+        let px_y = offset_by(cell_y_to_px_y(y as usize), self.y_off);
+
+        let colour = self.colour;
+
+        match self.shape {
+            Shape::FullCell => {
+                framebuffer.draw_rect(px_x, px_y, CELL_WIDTH, CELL_HEIGHT, colour);
+            }
+            Shape::Player => {
+                framebuffer.draw_rect(
+                    px_x.saturating_add(4),
+                    px_y.saturating_add(4),
+                    CELL_WIDTH.saturating_sub(8),
+                    CELL_HEIGHT.saturating_sub(6),
+                    colour,
+                );
+            }
+            Shape::DeadOrb0 => {
+                framebuffer.draw_AA_circle(
+                    px_x + CELL_WIDTH / 2,
+                    px_y + CELL_HEIGHT / 2,
+                    CELL_RADIUS * 2 / 3,
+                    colour,
+                );
+            }
+        }
+    }
+
+    pub fn is_offset(&self) -> bool {
+        self.x_off != 0 || self.y_off != 0
+    }
+
+    pub fn reduce_offset(&mut self, offset: isize) {
+        if self.x_off > 0 {
+            self.x_off -= offset;
+        } else if self.x_off < 0 {
+            self.x_off += offset;
+        } else {
+            //do nothing
+        }
+
+        if self.y_off > 0 {
+            self.y_off -= offset;
+        } else if self.y_off < 0 {
+            self.y_off += offset;
+        } else {
+            //do nothing
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub enum Shape {
+    FullCell,
+    Player,
+    DeadOrb0,
+}
+
+impl Default for Shape {
+    fn default() -> Self {
+        Shape::FullCell
     }
 }
 
@@ -158,94 +335,6 @@ pub mod Component {
              | Appearance.bits
              | PlayerControlled.bits,
         }
-    }
-}
-
-pub const BLUE: u32 = 0xFFEE2222;
-pub const GREEN: u32 = 0xFF22EE22;
-pub const RED: u32 = 0xFF2222EE;
-pub const FLOOR: u32 = 0xFF104010;
-
-#[derive(Clone, Copy, Default)]
-pub struct Appearance {
-    pub colour: u32,
-    pub shape: Shape,
-    pub x_off: isize,
-    pub y_off: isize,
-}
-
-pub fn offset_by(value: usize, offset: isize) -> usize {
-    if offset > 0 {
-        value.saturating_add(offset as usize)
-    } else {
-        value.saturating_sub(offset.abs() as usize)
-    }
-}
-
-impl Appearance {
-    pub fn render_positioned(&self, framebuffer: &mut Framebuffer, (x, y): Position) {
-        let px_x = offset_by(cell_x_to_px_x(x as usize), self.x_off);
-        let px_y = offset_by(cell_y_to_px_y(y as usize), self.y_off);
-
-        let colour = self.colour;
-
-        match self.shape {
-            Shape::FullCell => {
-                framebuffer.draw_rect(px_x, px_y, CELL_WIDTH, CELL_HEIGHT, colour);
-            }
-            Shape::Player => {
-                framebuffer.draw_rect(
-                    px_x.saturating_add(4),
-                    px_y.saturating_add(4),
-                    CELL_WIDTH.saturating_sub(8),
-                    CELL_HEIGHT.saturating_sub(6),
-                    colour,
-                );
-            }
-            Shape::DeadOrb0 => {
-                framebuffer.draw_circle(
-                    px_x + CELL_WIDTH / 2,
-                    px_y + CELL_HEIGHT / 2,
-                    CELL_RADIUS,
-                    colour,
-                );
-            }
-        }
-    }
-
-    pub fn is_offset(&self) -> bool {
-        self.x_off != 0 || self.y_off != 0
-    }
-
-    pub fn reduce_offset(&mut self, offset: isize) {
-        if self.x_off > 0 {
-            self.x_off -= offset;
-        } else if self.x_off < 0 {
-            self.x_off += offset;
-        } else {
-            //do nothing
-        }
-
-        if self.y_off > 0 {
-            self.y_off -= offset;
-        } else if self.y_off < 0 {
-            self.y_off += offset;
-        } else {
-            //do nothing
-        }
-    }
-}
-
-#[derive(Clone, Copy)]
-pub enum Shape {
-    FullCell,
-    Player,
-    DeadOrb0,
-}
-
-impl Default for Shape {
-    fn default() -> Self {
-        Shape::FullCell
     }
 }
 

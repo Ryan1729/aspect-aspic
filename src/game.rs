@@ -21,7 +21,7 @@ pub fn update_and_render(state: &mut GameState, framebuffer: &mut Framebuffer, i
 
             if input.pressed_this_frame(Button::Right) && x < BOARD_WIDTH - 1 {
                 x = x.saturating_add(1);
-                appearance.x_off = -(CELL_WIDTH as isize);
+                appearance.x_off = -(CELL_WIDTH as isize)
             }
 
             if input.pressed_this_frame(Button::Up) && y > 0 {
