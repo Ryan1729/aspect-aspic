@@ -46,7 +46,7 @@ macro_rules! colour {
 
 macro_rules! set_alpha {
     ($colour: expr, $alpha: expr) => {
-        ($colour & 0x00_FF_FF_FF) | $alpha << 24
+        ($colour & 0x00_FF_FF_FF) | (255 - $alpha) << 24
     };
 }
 
