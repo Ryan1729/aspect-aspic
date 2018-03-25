@@ -46,7 +46,7 @@ macro_rules! colour {
 
 macro_rules! set_alpha {
     ($colour: expr, $alpha: expr) => {
-        ($colour & 0x00_FF_FF_FF) | (255 - $alpha) << 24
+        ($colour & 0x00_FF_FF_FF) | $alpha << 24
     };
 }
 
@@ -170,7 +170,7 @@ impl Framebuffer {
             alpha = 255 * isize::abs(err - 2 * (x + y) - 2) / diameter;
 
             {
-                let new_colour = set_alpha!(colour, alpha as u32);
+                let new_colour = set_alpha!(colour, 255 - (alpha as u32));
 
                 /*   I. Quadrant */
                 self.blend_xy((xm - x) as usize, (ym + y) as usize, new_colour);
@@ -192,7 +192,7 @@ impl Framebuffer {
 
                 /* outward pixel */
                 if alpha < 256 {
-                    let new_colour = set_alpha!(colour, alpha as u32);
+                    let new_colour = set_alpha!(colour, 255 - (alpha as u32));
 
                     self.blend_xy((xm - x) as usize, (ym + y + 1) as usize, new_colour);
                     self.blend_xy((xm - y - 1) as usize, (ym - x) as usize, new_colour);
@@ -209,7 +209,7 @@ impl Framebuffer {
 
                 /* inward pixel */
                 if alpha < 256 {
-                    let new_colour = set_alpha!(colour, alpha as u32);
+                    let new_colour = set_alpha!(colour, 255 - (alpha as u32));
                     self.blend_xy((xm - x2 - 1) as usize, (ym + y) as usize, new_colour);
                     self.blend_xy((xm - y) as usize, (ym - x2 - 1) as usize, new_colour);
                     self.blend_xy((xm + x2 + 1) as usize, (ym - y) as usize, new_colour);
