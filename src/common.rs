@@ -129,13 +129,17 @@ impl Framebuffer {
         let background = self.buffer[i];
         let alpha = alpha!(colour) + 1;
         let inv_alpha = 256 - alpha!(colour);
-
         self.buffer[i] = colour!(
             (alpha * red!(colour) + inv_alpha * red!(background)) >> 8,
             (alpha * green!(colour) + inv_alpha * green!(background)) >> 8,
             (alpha * blue!(colour) + inv_alpha * blue!(background)) >> 8,
             0xFF
         );
+    }
+
+    #[inline]
+    pub fn blend_xy(&mut self, x: usize, y: usize, colour: u32) {
+        self.blend(Framebuffer::xy_to_i(x, y), colour);
     }
 
     //see http://members.chello.at/easyfilter/bresenham.c
@@ -169,25 +173,13 @@ impl Framebuffer {
                 let new_colour = set_alpha!(colour, alpha as u32);
 
                 /*   I. Quadrant */
-                self.blend(
-                    Framebuffer::xy_to_i((xm - x) as usize, (ym + y) as usize),
-                    new_colour,
-                );
+                self.blend_xy((xm - x) as usize, (ym + y) as usize, new_colour);
                 /*  II. Quadrant */
-                self.blend(
-                    Framebuffer::xy_to_i((xm - y) as usize, (ym - x) as usize),
-                    new_colour,
-                );
+                self.blend_xy((xm - y) as usize, (ym - x) as usize, new_colour);
                 /* III. Quadrant */
-                self.blend(
-                    Framebuffer::xy_to_i((xm + x) as usize, (ym - y) as usize),
-                    new_colour,
-                );
+                self.blend_xy((xm + x) as usize, (ym - y) as usize, new_colour);
                 /*  IV. Quadrant */
-                self.blend(
-                    Framebuffer::xy_to_i((xm + y) as usize, (ym + x) as usize),
-                    new_colour,
-                );
+                self.blend_xy((xm + y) as usize, (ym + x) as usize, new_colour);
             }
 
             /* remember values */
@@ -202,22 +194,10 @@ impl Framebuffer {
                 if alpha < 256 {
                     let new_colour = set_alpha!(colour, alpha as u32);
 
-                    self.blend(
-                        Framebuffer::xy_to_i((xm - x) as usize, (ym + y + 1) as usize),
-                        new_colour,
-                    );
-                    self.blend(
-                        Framebuffer::xy_to_i((xm - y - 1) as usize, (ym - x) as usize),
-                        new_colour,
-                    );
-                    self.blend(
-                        Framebuffer::xy_to_i((xm + x) as usize, (ym - y - 1) as usize),
-                        new_colour,
-                    );
-                    self.blend(
-                        Framebuffer::xy_to_i((xm + y + 1) as usize, (ym + x) as usize),
-                        new_colour,
-                    );
+                    self.blend_xy((xm - x) as usize, (ym + y + 1) as usize, new_colour);
+                    self.blend_xy((xm - y - 1) as usize, (ym - x) as usize, new_colour);
+                    self.blend_xy((xm + x) as usize, (ym - y - 1) as usize, new_colour);
+                    self.blend_xy((xm + y + 1) as usize, (ym + x) as usize, new_colour);
                 }
                 x += 1;
                 err += x * 2 + 1;
@@ -230,22 +210,10 @@ impl Framebuffer {
                 /* inward pixel */
                 if alpha < 256 {
                     let new_colour = set_alpha!(colour, alpha as u32);
-                    self.blend(
-                        Framebuffer::xy_to_i((xm - x2 - 1) as usize, (ym + y) as usize),
-                        new_colour,
-                    );
-                    self.blend(
-                        Framebuffer::xy_to_i((xm - y) as usize, (ym - x2 - 1) as usize),
-                        new_colour,
-                    );
-                    self.blend(
-                        Framebuffer::xy_to_i((xm + x2 + 1) as usize, (ym - y) as usize),
-                        new_colour,
-                    );
-                    self.blend(
-                        Framebuffer::xy_to_i((xm + y) as usize, (ym + x2 + 1) as usize),
-                        new_colour,
-                    );
+                    self.blend_xy((xm - x2 - 1) as usize, (ym + y) as usize, new_colour);
+                    self.blend_xy((xm - y) as usize, (ym - x2 - 1) as usize, new_colour);
+                    self.blend_xy((xm + x2 + 1) as usize, (ym - y) as usize, new_colour);
+                    self.blend_xy((xm + y) as usize, (ym + x2 + 1) as usize, new_colour);
                 }
                 y += 1;
                 err += y * 2 + 1;
