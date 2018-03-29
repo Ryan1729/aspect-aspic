@@ -16,22 +16,22 @@ pub fn update_and_render(state: &mut GameState, framebuffer: &mut Framebuffer, i
 
             if input.pressed_this_frame(Button::Left) && x > 0 {
                 x = x.saturating_sub(1);
-                appearance.x_off = CELL_WIDTH as isize;
+                appearance.offset.0 = CELL_WIDTH as isize;
             }
 
             if input.pressed_this_frame(Button::Right) && x < BOARD_WIDTH - 1 {
                 x = x.saturating_add(1);
-                appearance.x_off = -(CELL_WIDTH as isize)
+                appearance.offset.0 = -(CELL_WIDTH as isize)
             }
 
             if input.pressed_this_frame(Button::Up) && y > 0 {
                 y = y.saturating_sub(1);
-                appearance.y_off = CELL_WIDTH as isize;
+                appearance.offset.1 = CELL_WIDTH as isize;
             }
 
             if input.pressed_this_frame(Button::Down) && y < BOARD_HEIGHT - 1 {
                 y = y.saturating_add(1);
-                appearance.y_off = -(CELL_WIDTH as isize);
+                appearance.offset.1 = -(CELL_WIDTH as isize);
             }
 
             state.positions[i] = (x, y);
@@ -42,7 +42,15 @@ pub fn update_and_render(state: &mut GameState, framebuffer: &mut Framebuffer, i
 
     for i in 0..GameState::ENTITY_COUNT {
         let entity = state.entities[i];
-        if entity.contains(Component::Position | Component::Appearance) {
+        if entity
+            .contains(Component::Position | Component::Appearance | Component::IntraCellPosition)
+        {
+            let pos = state.positions[i];
+            let inter_pos = state.intra_cell_positions[i];
+
+            let appearance = &mut state.appearances[i];
+            appearance.render_intra_positioned(framebuffer, pos, inter_pos);
+        } else if entity.contains(Component::Position | Component::Appearance) {
             let pos = state.positions[i];
 
             let appearance = &mut state.appearances[i];

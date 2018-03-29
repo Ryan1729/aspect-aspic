@@ -238,12 +238,28 @@ pub const GREEN: u32 = 0xFF22EE22;
 pub const RED: u32 = 0xFF2222EE;
 pub const FLOOR: u32 = 0xFF104010;
 
+//in pixels
+pub const CELL_WIDTH: usize = 32;
+pub const CELL_HEIGHT: usize = 32;
+pub const CELL_DIAMETER: usize = CELL_WIDTH;
+pub const CELL_RADIUS: usize = CELL_DIAMETER / 2;
+
+pub fn cell_x_to_px_x(x: usize) -> usize {
+    x * (CELL_WIDTH + 1) + 1
+}
+pub fn cell_y_to_px_y(y: usize) -> usize {
+    y * (CELL_HEIGHT + 1) + 1
+}
+
+//A spacer pixel after the last cell.
+pub const HUD_LEFT_EDGE: usize = ((BOARD_WIDTH as usize) * (CELL_WIDTH + 1) + 1) + 1;
+pub const HUD_WIDTH: usize = SCREEN_WIDTH - HUD_LEFT_EDGE;
+
 #[derive(Clone, Copy, Default)]
 pub struct Appearance {
     pub colour: u32,
     pub shape: Shape,
-    pub x_off: isize,
-    pub y_off: isize,
+    pub offset: (isize, isize),
 }
 
 pub fn offset_by(value: usize, offset: isize) -> usize {
@@ -255,9 +271,27 @@ pub fn offset_by(value: usize, offset: isize) -> usize {
 }
 
 impl Appearance {
-    pub fn render_positioned(&self, framebuffer: &mut Framebuffer, (x, y): Position) {
-        let px_x = offset_by(cell_x_to_px_x(x as usize), self.x_off);
-        let px_y = offset_by(cell_y_to_px_y(y as usize), self.y_off);
+    pub fn render_intra_positioned(
+        &self,
+        framebuffer: &mut Framebuffer,
+        pos: Position,
+        intra_pos: IntraCellPosition,
+    ) {
+        self.render_positioned_at_offset(framebuffer, pos, intra_pos.get_offset());
+    }
+
+    pub fn render_positioned(&self, framebuffer: &mut Framebuffer, pos: Position) {
+        self.render_positioned_at_offset(framebuffer, pos, self.offset);
+    }
+
+    pub fn render_positioned_at_offset(
+        &self,
+        framebuffer: &mut Framebuffer,
+        (x, y): Position,
+        (x_off, y_off): (isize, isize),
+    ) {
+        let px_x = offset_by(cell_x_to_px_x(x as usize), x_off);
+        let px_y = offset_by(cell_y_to_px_y(y as usize), y_off);
 
         let colour = self.colour;
 
@@ -278,7 +312,7 @@ impl Appearance {
                 framebuffer.draw_circle(
                     px_x + CELL_WIDTH / 2,
                     px_y + CELL_HEIGHT / 2,
-                    CELL_RADIUS * 2 / 3,
+                    CELL_DIAMETER / 9,
                     colour,
                 );
             }
@@ -286,22 +320,26 @@ impl Appearance {
     }
 
     pub fn is_offset(&self) -> bool {
-        self.x_off != 0 || self.y_off != 0
+        let (x_off, y_off) = self.offset;
+
+        x_off != 0 || y_off != 0
     }
 
     pub fn reduce_offset(&mut self, offset: isize) {
-        if self.x_off > 0 {
-            self.x_off -= offset;
-        } else if self.x_off < 0 {
-            self.x_off += offset;
+        let (x_off, y_off) = (&mut self.offset.0, &mut self.offset.1);
+
+        if *x_off > 0 {
+            *x_off -= offset;
+        } else if *x_off < 0 {
+            *x_off += offset;
         } else {
             //do nothing
         }
 
-        if self.y_off > 0 {
-            self.y_off -= offset;
-        } else if self.y_off < 0 {
-            self.y_off += offset;
+        if *y_off > 0 {
+            *y_off -= offset;
+        } else if *y_off < 0 {
+            *y_off += offset;
         } else {
             //do nothing
         }
@@ -323,11 +361,63 @@ impl Default for Shape {
 
 pub type Position = (BoardCoord, BoardCoord);
 
+#[derive(Clone, Copy)]
+pub enum _2by2 {
+    _0_0,
+    _0_1,
+    _1_0,
+    _1_1,
+}
+
+#[derive(Clone, Copy)]
+pub enum _3by3 {
+    _0_0,
+    _0_1,
+    _0_2,
+    _1_0,
+    _1_1,
+    _1_2,
+    _2_0,
+    _2_1,
+    _2_2,
+}
+
+#[derive(Clone, Copy)]
+pub enum IntraCellPosition {
+    Four(_2by2),
+    Nine(_3by3),
+}
+use IntraCellPosition::*;
+
+impl IntraCellPosition {
+    fn get_offset(&self) -> (isize, isize) {
+        let w = CELL_WIDTH as isize;
+        let h = CELL_HEIGHT as isize;
+        match *self {
+            Four(_2by2::_0_0) => (w / 4, h / 4),
+            Four(_2by2::_1_0) => (w * 3 / 4, h / 4),
+            Four(_2by2::_0_1) => (w / 4, h * 3 / 4),
+            Four(_2by2::_1_1) => (w * 3 / 4, h * 3 / 4),
+
+            Nine(_3by3::_0_0) => (0, 0),
+            Nine(_3by3::_1_0) => (w / 3, 0),
+            Nine(_3by3::_2_0) => (w * 2 / 3, 0),
+            Nine(_3by3::_0_1) => (0, h / 3),
+            Nine(_3by3::_1_1) => (w / 3, h / 3),
+            Nine(_3by3::_2_1) => (w * 2 / 3, h / 3),
+            Nine(_3by3::_0_2) => (0, h * 2 / 3),
+            Nine(_3by3::_1_2) => (w / 3, h * 2 / 3),
+            Nine(_3by3::_2_2) => (w * 2 / 3, h * 2 / 3),
+        }
+    }
+}
+
 pub struct GameState {
     pub entities: [Component::Ty; GameState::ENTITY_COUNT],
 
     pub positions: [Position; GameState::ENTITY_COUNT],
     pub appearances: [Appearance; GameState::ENTITY_COUNT],
+    pub intra_cell_positions: [IntraCellPosition; GameState::ENTITY_COUNT],
 }
 
 impl GameState {
@@ -337,6 +427,7 @@ impl GameState {
         let mut entities = [Component::Ty::empty(); GameState::ENTITY_COUNT];
         let mut positions = [(0, 0); GameState::ENTITY_COUNT];
         let mut appearances = [Appearance::default(); GameState::ENTITY_COUNT];
+        let mut intra_cell_positions = [Four(_2by2::_0_0); GameState::ENTITY_COUNT];
 
         {
             let mut i = 0;
@@ -359,15 +450,18 @@ impl GameState {
 
         let circleId = playerId + 1;
 
-        entities[circleId] |= Component::Position | Component::Appearance;
+        entities[circleId] |=
+            Component::Position | Component::Appearance | Component::IntraCellPosition;
         positions[circleId] = get_board_xy(circleId).unwrap_or((0, 0));
         appearances[circleId].colour = RED;
         appearances[circleId].shape = Shape::DeadOrb0;
+        intra_cell_positions[circleId] = Nine(_3by3::_0_0);
 
         GameState {
             entities,
             positions,
             appearances,
+            intra_cell_positions,
         }
     }
 }
@@ -381,6 +475,7 @@ pub mod Component {
             const Player = Position.bits
              | Appearance.bits
              | PlayerControlled.bits,
+             const IntraCellPosition = 1 << 3,
         }
     }
 }
@@ -519,19 +614,3 @@ fn is_index_on_board(piece_index: usize) -> bool {
 fn xy_on_board(x: BoardCoord, y: BoardCoord) -> bool {
     x < BOARD_WIDTH && y < BOARD_HEIGHT
 }
-
-//in pixels
-pub const CELL_WIDTH: usize = 32;
-pub const CELL_HEIGHT: usize = 32;
-pub const CELL_RADIUS: usize = CELL_WIDTH / 2;
-
-pub fn cell_x_to_px_x(x: usize) -> usize {
-    x * (CELL_WIDTH + 1) + 1
-}
-pub fn cell_y_to_px_y(y: usize) -> usize {
-    y * (CELL_HEIGHT + 1) + 1
-}
-
-//A spacer pixel after the last cell.
-pub const HUD_LEFT_EDGE: usize = ((BOARD_WIDTH as usize) * (CELL_WIDTH + 1) + 1) + 1;
-pub const HUD_WIDTH: usize = SCREEN_WIDTH - HUD_LEFT_EDGE;
