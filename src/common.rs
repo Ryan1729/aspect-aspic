@@ -309,9 +309,18 @@ impl Appearance {
                 );
             }
             Shape::DeadOrb0 => {
+                framebuffer.draw_circle(px_x, px_y, CELL_DIAMETER / 9, colour);
+            }
+            Shape::Blob0 => {
                 framebuffer.draw_circle(
-                    px_x + CELL_WIDTH / 2,
-                    px_y + CELL_HEIGHT / 2,
+                    px_x - CELL_WIDTH / 9,
+                    px_y - CELL_HEIGHT / 9,
+                    CELL_DIAMETER / 9,
+                    colour,
+                );
+                framebuffer.draw_circle(
+                    px_x + CELL_WIDTH / 9,
+                    px_y + CELL_HEIGHT / 9,
                     CELL_DIAMETER / 9,
                     colour,
                 );
@@ -351,6 +360,7 @@ pub enum Shape {
     FullCell,
     Player,
     DeadOrb0,
+    Blob0,
 }
 
 impl Default for Shape {
@@ -394,20 +404,31 @@ impl IntraCellPosition {
         let w = CELL_WIDTH as isize;
         let h = CELL_HEIGHT as isize;
         match *self {
-            Four(_2by2::_0_0) => (w / 4, h / 4),
-            Four(_2by2::_1_0) => (w * 3 / 4, h / 4),
-            Four(_2by2::_0_1) => (w / 4, h * 3 / 4),
-            Four(_2by2::_1_1) => (w * 3 / 4, h * 3 / 4),
+            Four(pos) => {
+                let (x, y) = match pos {
+                    _2by2::_0_0 => (0, 0),
+                    _2by2::_1_0 => (w / 2, 0),
+                    _2by2::_0_1 => (0, h / 2),
+                    _2by2::_1_1 => (w / 2, h / 2),
+                };
 
-            Nine(_3by3::_0_0) => (0, 0),
-            Nine(_3by3::_1_0) => (w / 3, 0),
-            Nine(_3by3::_2_0) => (w * 2 / 3, 0),
-            Nine(_3by3::_0_1) => (0, h / 3),
-            Nine(_3by3::_1_1) => (w / 3, h / 3),
-            Nine(_3by3::_2_1) => (w * 2 / 3, h / 3),
-            Nine(_3by3::_0_2) => (0, h * 2 / 3),
-            Nine(_3by3::_1_2) => (w / 3, h * 2 / 3),
-            Nine(_3by3::_2_2) => (w * 2 / 3, h * 2 / 3),
+                (x + w / 4, y + h / 4)
+            }
+            Nine(pos) => {
+                let (x, y) = match pos {
+                    _3by3::_0_0 => (0, 0),
+                    _3by3::_1_0 => (w / 3, 0),
+                    _3by3::_2_0 => (w * 2 / 3, 0),
+                    _3by3::_0_1 => (0, h / 3),
+                    _3by3::_1_1 => (w / 3, h / 3),
+                    _3by3::_2_1 => (w * 2 / 3, h / 3),
+                    _3by3::_0_2 => (0, h * 2 / 3),
+                    _3by3::_1_2 => (w / 3, h * 2 / 3),
+                    _3by3::_2_2 => (w * 2 / 3, h * 2 / 3),
+                };
+
+                (x + w / 6, y + h / 6)
+            }
         }
     }
 }
@@ -448,14 +469,42 @@ impl GameState {
         appearances[playerId].colour = BLUE;
         appearances[playerId].shape = Shape::Player;
 
-        let circleId = playerId + 1;
+        let nineCircleIdBase = playerId + 1;
 
-        entities[circleId] |=
-            Component::Position | Component::Appearance | Component::IntraCellPosition;
-        positions[circleId] = get_board_xy(circleId).unwrap_or((0, 0));
-        appearances[circleId].colour = RED;
-        appearances[circleId].shape = Shape::DeadOrb0;
-        intra_cell_positions[circleId] = Nine(_3by3::_0_0);
+        for circleId in nineCircleIdBase..nineCircleIdBase + 9 {
+            entities[circleId] |=
+                Component::Position | Component::Appearance | Component::IntraCellPosition;
+            positions[circleId] = (3, 4);
+            appearances[circleId].colour = RED;
+            appearances[circleId].shape = Shape::DeadOrb0;
+            intra_cell_positions[circleId] = match circleId - nineCircleIdBase {
+                0 => Nine(_3by3::_0_0),
+                1 => Nine(_3by3::_0_1),
+                2 => Nine(_3by3::_0_2),
+                3 => Nine(_3by3::_1_0),
+                4 => Nine(_3by3::_1_1),
+                5 => Nine(_3by3::_1_2),
+                6 => Nine(_3by3::_2_0),
+                7 => Nine(_3by3::_2_1),
+                _ => Nine(_3by3::_2_2),
+            };
+        }
+
+        let fourCircleIdBase = nineCircleIdBase + 9;
+
+        for circleId in fourCircleIdBase..fourCircleIdBase + 4 {
+            entities[circleId] |=
+                Component::Position | Component::Appearance | Component::IntraCellPosition;
+            positions[circleId] = (4, 3);
+            appearances[circleId].colour = RED;
+            appearances[circleId].shape = Shape::Blob0;
+            intra_cell_positions[circleId] = match circleId - fourCircleIdBase {
+                0 => Four(_2by2::_0_0),
+                1 => Four(_2by2::_1_0),
+                2 => Four(_2by2::_0_1),
+                _ => Four(_2by2::_1_1),
+            };
+        }
 
         GameState {
             entities,
