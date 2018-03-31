@@ -59,13 +59,57 @@ impl Framebuffer {
         y.saturating_mul(SCREEN_WIDTH).saturating_add(x)
     }
 
-    pub fn draw_rect(&mut self, x: usize, y: usize, width: usize, height: usize, colour: u32) {
+    pub fn draw_filled_rect(
+        &mut self,
+        x: usize,
+        y: usize,
+        width: usize,
+        height: usize,
+        colour: u32,
+    ) {
         let one_past_right_edge = x + width;
         let one_past_bottom_edge = y + height;
 
         for current_y in y..one_past_bottom_edge {
             for current_x in x..one_past_right_edge {
                 let i = Framebuffer::xy_to_i(current_x, current_y);
+                if i < self.buffer.len() {
+                    self.buffer[i] = colour;
+                }
+            }
+        }
+    }
+
+    pub fn draw_rect(&mut self, x: usize, y: usize, width: usize, height: usize, colour: u32) {
+        let one_past_right_edge = x + width;
+        let one_past_bottom_edge = y + height;
+
+        for current_y in y..one_past_bottom_edge {
+            {
+                let i = Framebuffer::xy_to_i(x, current_y);
+                if i < self.buffer.len() {
+                    self.buffer[i] = colour;
+                }
+            }
+
+            {
+                let i = Framebuffer::xy_to_i(one_past_right_edge - 1, current_y);
+                if i < self.buffer.len() {
+                    self.buffer[i] = colour;
+                }
+            }
+        }
+
+        for current_x in x..one_past_right_edge {
+            {
+                let i = Framebuffer::xy_to_i(current_x, y);
+                if i < self.buffer.len() {
+                    self.buffer[i] = colour;
+                }
+            }
+
+            {
+                let i = Framebuffer::xy_to_i(current_x, one_past_bottom_edge - 1);
                 if i < self.buffer.len() {
                     self.buffer[i] = colour;
                 }
@@ -410,10 +454,10 @@ impl Appearance {
 
         match self.shape {
             Shape::FullCell => {
-                framebuffer.draw_rect(px_x, px_y, CELL_WIDTH, CELL_HEIGHT, colour);
+                framebuffer.draw_filled_rect(px_x, px_y, CELL_WIDTH, CELL_HEIGHT, colour);
             }
             Shape::Player => {
-                framebuffer.draw_rect(
+                framebuffer.draw_filled_rect(
                     px_x.saturating_add(4),
                     px_y.saturating_add(4),
                     CELL_WIDTH.saturating_sub(8),
@@ -438,6 +482,15 @@ impl Appearance {
                     px_x + CELL_WIDTH / 9,
                     px_y + CELL_HEIGHT / 9,
                     CELL_DIAMETER / 9,
+                    colour,
+                );
+            }
+            Shape::Selectrix => {
+                framebuffer.draw_rect(
+                    px_x - CELL_WIDTH / 4,
+                    px_y - CELL_HEIGHT / 4,
+                    CELL_WIDTH / 2,
+                    CELL_HEIGHT / 2,
                     colour,
                 );
             }
@@ -478,6 +531,7 @@ pub enum Shape {
     DeadOrb0,
     LiveOrb0,
     Blob0,
+    Selectrix,
 }
 
 impl Default for Shape {
@@ -641,6 +695,22 @@ impl GameState {
                 6 => Nine(_3by3::_2_0),
                 7 => Nine(_3by3::_2_1),
                 _ => Nine(_3by3::_2_2),
+            };
+        }
+
+        let selectrixIdBase = solidNineCircleIdBase + 9;
+
+        for selectrixId in selectrixIdBase..selectrixIdBase + 4 {
+            entities[selectrixId] |=
+                Component::Position | Component::Appearance | Component::IntraCellPosition;
+            positions[selectrixId] = ((selectrixId - selectrixIdBase) as u8, 5);
+            appearances[selectrixId].colour = 0xFF33CCCC;
+            appearances[selectrixId].shape = Shape::Selectrix;
+            intra_cell_positions[selectrixId] = match selectrixId - selectrixIdBase {
+                0 => Four(_2by2::_0_0),
+                1 => Four(_2by2::_1_0),
+                2 => Four(_2by2::_0_1),
+                _ => Four(_2by2::_1_1),
             };
         }
 

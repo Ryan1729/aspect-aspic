@@ -58,5 +58,5 @@ pub fn update_and_render(state: &mut GameState, framebuffer: &mut Framebuffer, i
         }
     }
 
-    framebuffer.draw_rect(HUD_LEFT_EDGE, 0, HUD_WIDTH, SCREEN_HEIGHT, 0xFF333333);
+    framebuffer.draw_filled_rect(HUD_LEFT_EDGE, 0, HUD_WIDTH, SCREEN_HEIGHT, 0xFF333333);
 }
