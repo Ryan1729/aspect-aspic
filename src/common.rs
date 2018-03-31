@@ -80,10 +80,10 @@ impl Framebuffer {
     }
 
     //see http://members.chello.at/~easyfilter/bresenham.html
-    pub fn draw_solid_circle(&mut self, xMid: usize, yMid: usize, radius: usize, colour: u32) {
+    pub fn draw_crisp_circle(&mut self, xMid: usize, yMid: usize, radius: usize, colour: u32) {
         if xMid < radius || yMid < radius {
             if cfg!(debug_assertions) {
-                console!(log, "draw_solid_circle xMid < radius || yMid < radius");
+                console!(log, "draw_crisp_circle xMid < radius || yMid < radius");
             }
 
             return;
@@ -222,6 +222,119 @@ impl Framebuffer {
             x < 0
         } {}
     }
+
+    pub fn draw_filled_circle(&mut self, xMid: usize, yMid: usize, radius: usize, colour: u32) {
+        if xMid < radius || yMid < radius {
+            if cfg!(debug_assertions) {
+                console!(log, "draw_filled_circle xMid < radius || yMid < radius");
+            }
+
+            return;
+        }
+        let xm = xMid as isize;
+        let ym = yMid as isize;
+
+        /* II. quadrant from bottom left to top right */
+        let mut x: isize = -(radius as isize);
+        let mut y: isize = 0;
+
+        let mut alpha;
+
+        /* error of 1.step */
+        let mut err: isize = 2 - 2 * (radius as isize);
+
+        //equivalent to 2 * radius - 1
+        let diameter = 1 - err;
+        while {
+            /* get blend value of pixel */
+            alpha = 255 * isize::abs(err - 2 * (x + y) - 2) / diameter;
+
+            {
+                let new_colour = set_alpha!(colour, 255 - (alpha as u32));
+
+                /*   I. Quadrant */
+                self.blend_xy((xm - x) as usize, (ym + y) as usize, new_colour);
+                /*  II. Quadrant */
+                self.blend_xy((xm - y) as usize, (ym - x) as usize, new_colour);
+                /* III. Quadrant */
+                self.blend_xy((xm + x) as usize, (ym - y) as usize, new_colour);
+                /*  IV. Quadrant */
+                self.blend_xy((xm + y) as usize, (ym + x) as usize, new_colour);
+            }
+
+            /* remember values */
+            let e2 = err;
+            let x2 = x;
+
+            /* x step */
+            if err + y > 0 {
+                alpha = 255 * (err - 2 * x - 1) / diameter;
+
+                /* outward pixel */
+                if alpha < 256 {
+                    let new_colour = set_alpha!(colour, 255 - (alpha as u32));
+
+                    self.blend_xy((xm - x) as usize, (ym + y + 1) as usize, new_colour);
+                    self.blend_xy((xm - y - 1) as usize, (ym - x) as usize, new_colour);
+                    self.blend_xy((xm + x) as usize, (ym - y - 1) as usize, new_colour);
+                    self.blend_xy((xm + y + 1) as usize, (ym + x) as usize, new_colour);
+                }
+                x += 1;
+                err += x * 2 + 1;
+            }
+
+            /* y step */
+            if e2 + x2 <= 0 {
+                /* inward pixels */
+
+                let mut current_x;
+                let mut current_y;
+
+                current_x = (xm - x2 - 1) as usize;
+                current_y = (ym + y) as usize;
+                while current_x > xMid || current_y > yMid {
+                    self.buffer[Framebuffer::xy_to_i(current_x, current_y)] = colour;
+
+                    current_x -= 1;
+                    current_y -= 1;
+                }
+
+                current_x = (xm + y) as usize;
+                current_y = (ym + x2 + 1) as usize;
+                while current_x > xMid || current_y < yMid {
+                    self.buffer[Framebuffer::xy_to_i(current_x, current_y)] = colour;
+
+                    current_x -= 1;
+                    current_y += 1;
+                }
+
+                current_x = (xm - y) as usize;
+                current_y = (ym - x2 - 1) as usize;
+                while current_x < xMid || current_y > yMid {
+                    self.buffer[Framebuffer::xy_to_i(current_x, current_y)] = colour;
+
+                    current_x += 1;
+                    current_y -= 1;
+                }
+
+                current_x = (xm + x2 + 1) as usize;
+                current_y = (ym - y) as usize;
+                while current_x < xMid || current_y < yMid {
+                    self.buffer[Framebuffer::xy_to_i(current_x, current_y)] = colour;
+
+                    current_x += 1;
+                    current_y += 1;
+                }
+
+                y += 1;
+                err += y * 2 + 1;
+            }
+
+            x < 0
+        } {}
+
+        self.buffer[Framebuffer::xy_to_i(xMid, yMid)] = colour;
+    }
 }
 
 impl Default for Framebuffer {
@@ -311,6 +424,9 @@ impl Appearance {
             Shape::DeadOrb0 => {
                 framebuffer.draw_circle(px_x, px_y, CELL_DIAMETER / 9, colour);
             }
+            Shape::LiveOrb0 => {
+                framebuffer.draw_filled_circle(px_x, px_y, CELL_DIAMETER / 9, colour);
+            }
             Shape::Blob0 => {
                 framebuffer.draw_circle(
                     px_x - CELL_WIDTH / 9,
@@ -360,6 +476,7 @@ pub enum Shape {
     FullCell,
     Player,
     DeadOrb0,
+    LiveOrb0,
     Blob0,
 }
 
@@ -503,6 +620,27 @@ impl GameState {
                 1 => Four(_2by2::_1_0),
                 2 => Four(_2by2::_0_1),
                 _ => Four(_2by2::_1_1),
+            };
+        }
+
+        let solidNineCircleIdBase = fourCircleIdBase + 4;
+
+        for circleId in solidNineCircleIdBase..solidNineCircleIdBase + 9 {
+            entities[circleId] |=
+                Component::Position | Component::Appearance | Component::IntraCellPosition;
+            positions[circleId] = (3, 3);
+            appearances[circleId].colour = RED;
+            appearances[circleId].shape = Shape::LiveOrb0;
+            intra_cell_positions[circleId] = match circleId - solidNineCircleIdBase {
+                0 => Nine(_3by3::_0_0),
+                1 => Nine(_3by3::_0_1),
+                2 => Nine(_3by3::_0_2),
+                3 => Nine(_3by3::_1_0),
+                4 => Nine(_3by3::_1_1),
+                5 => Nine(_3by3::_1_2),
+                6 => Nine(_3by3::_2_0),
+                7 => Nine(_3by3::_2_1),
+                _ => Nine(_3by3::_2_2),
             };
         }
 
