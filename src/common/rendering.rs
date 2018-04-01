@@ -569,6 +569,34 @@ impl _2by2 {
             _2by2::_1_0 => _2by2::_1_1,
         }
     }
+
+    pub fn on_left_edge(&self) -> bool {
+        match *self {
+            _2by2::_0_0 | _2by2::_0_1 => true,
+            _ => false,
+        }
+    }
+
+    pub fn on_right_edge(&self) -> bool {
+        match *self {
+            _2by2::_1_0 | _2by2::_1_1 => true,
+            _ => false,
+        }
+    }
+
+    pub fn on_top_edge(&self) -> bool {
+        match *self {
+            _2by2::_0_0 | _2by2::_1_0 => true,
+            _ => false,
+        }
+    }
+
+    pub fn on_bottom_edge(&self) -> bool {
+        match *self {
+            _2by2::_0_1 | _2by2::_1_1 => true,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -640,6 +668,34 @@ impl _3by3 {
             _3by3::_2_1 => _3by3::_2_2,
         }
     }
+
+    pub fn on_left_edge(&self) -> bool {
+        match *self {
+            _3by3::_0_0 | _3by3::_0_1 | _3by3::_0_2 => true,
+            _ => false,
+        }
+    }
+
+    pub fn on_right_edge(&self) -> bool {
+        match *self {
+            _3by3::_2_0 | _3by3::_2_1 | _3by3::_2_2 => true,
+            _ => false,
+        }
+    }
+
+    pub fn on_top_edge(&self) -> bool {
+        match *self {
+            _3by3::_0_0 | _3by3::_1_0 | _3by3::_2_0 => true,
+            _ => false,
+        }
+    }
+
+    pub fn on_bottom_edge(&self) -> bool {
+        match *self {
+            _3by3::_0_2 | _3by3::_1_2 | _3by3::_2_2 => true,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -681,32 +737,48 @@ impl IntraCellPosition {
             }
         }
     }
+}
 
-    pub fn right(&self) -> IntraCellPosition {
-        match *self {
-            Four(pos) => Four(pos.right()),
-            Nine(pos) => Nine(pos.right()),
+macro_rules! intra_pos_self_passthrough {
+    ( $($method_name:ident,)* ) => {
+        impl IntraCellPosition {
+            $(
+                pub fn $method_name (&self) -> Self {
+                    match *self {
+                        Four(pos) => Four(pos.$method_name()),
+                        Nine(pos) => Nine(pos.$method_name()),
+                    }
+                 }
+              )*
         }
     }
+}
 
-    pub fn left(&self) -> IntraCellPosition {
-        match *self {
-            Four(pos) => Four(pos.left()),
-            Nine(pos) => Nine(pos.left()),
+intra_pos_self_passthrough!{
+    left,
+    right,
+    up,
+    down,
+}
+
+macro_rules! intra_pos_passthrough {
+    ( $($method_name:ident -> $returns:ty,)* ) => {
+        impl IntraCellPosition {
+            $(
+                pub fn $method_name (&self) -> $returns {
+                    match *self {
+                        Four(pos) => pos.$method_name(),
+                        Nine(pos) => pos.$method_name(),
+                    }
+                 }
+              )*
         }
     }
+}
 
-    pub fn up(&self) -> IntraCellPosition {
-        match *self {
-            Four(pos) => Four(pos.up()),
-            Nine(pos) => Nine(pos.up()),
-        }
-    }
-
-    pub fn down(&self) -> IntraCellPosition {
-        match *self {
-            Four(pos) => Four(pos.down()),
-            Nine(pos) => Nine(pos.down()),
-        }
-    }
+intra_pos_passthrough!{
+    on_left_edge -> bool,
+    on_right_edge -> bool,
+    on_top_edge -> bool,
+    on_bottom_edge -> bool,
 }

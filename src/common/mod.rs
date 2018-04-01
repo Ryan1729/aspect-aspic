@@ -24,6 +24,7 @@ pub struct GameState {
     //TODO Depending on how much I have to do things like this,
     //consider having multiple ways to retrieve compoents effiecently,
     //e.g. by compoent type, position etc.
+    pub avatarId: usize,
     pub selectrixId: usize,
 }
 
@@ -48,16 +49,16 @@ impl GameState {
             }
         }
 
-        let playerId = BOARD_LENGTH;
+        let avatarId = BOARD_LENGTH;
 
-        entities[playerId] |=
+        entities[avatarId] |=
             Component::PlayerControlled | Component::Position | Component::Appearance;
-        positions[playerId] = get_board_xy(playerId).unwrap_or((0, 0));
-        appearances[playerId].colour = BLUE;
-        appearances[playerId].shape = Shape::Player;
-        player_types[playerId] = PlayerType::Avatar;
+        positions[avatarId] = get_board_xy(avatarId).unwrap_or((0, 0));
+        appearances[avatarId].colour = BLUE;
+        appearances[avatarId].shape = Shape::Player;
+        player_types[avatarId] = PlayerType::Avatar;
 
-        let nineCircleIdBase = playerId + 1;
+        let nineCircleIdBase = avatarId + 1;
 
         for circleId in nineCircleIdBase..nineCircleIdBase + 9 {
             entities[circleId] |=
@@ -131,6 +132,7 @@ impl GameState {
             intra_cell_positions,
             player_types,
             mode: Mode::MoveAvatar,
+            avatarId,
             selectrixId,
         }
     }
