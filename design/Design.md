@@ -48,3 +48,19 @@ For example:
 ___
 
 I'm not really feeling this "dumb" reasons for things as a "feature" idea. But I would be willing to pass through "dumb" reasons for things as a part of iterative development. So I think I might try just implmenting the goal above with randomly moving blobs and then iterate (possibly using generation in some way) through different possibilities.
+
+___
+
+### Blob/Orb movement Idea
+
+The live orbs could move in a 3 by 3 grid while the player can throw orbs in a 2 by 2 grid. 
+
+![2by2and3by3.png](https://github.com/Ryan1729/aspect-aspic/raw/master/design/2by2and3by3.png)
+
+It seems reasonable for the orbs to "connect" if, after the orbs move, the thrown to area overlaps at least half of the orb.
+This implies that if the orbs are completely inside the 2 by 2 grid cell then a throw to that cell is guaranteed to hit (assuming orthogonal movement.) 
+However, if the orb is on the edge between two 2 by 2 grid cells, then there is only a 1/3 chance of a hit if either of the two 2 by 2 cells is throw to.
+Also, an orb in the center of the 3 by 3 grid has a 1/2 chance of being hit if any of the 2 by 2 cells is thrown to.
+These probabilities seem at least somewhat interesting assuming you can push them in your favour somehow. Perhaps placing obstacles? maybe the obstacles could simply be the dead orbs themselves?
+
+This grid aspect of this is already more or less implemented.
