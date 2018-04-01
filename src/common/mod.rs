@@ -17,6 +17,14 @@ pub struct GameState {
     pub positions: [Position; GameState::ENTITY_COUNT],
     pub appearances: [Appearance; GameState::ENTITY_COUNT],
     pub intra_cell_positions: [IntraCellPosition; GameState::ENTITY_COUNT],
+    pub player_types: [PlayerType; GameState::ENTITY_COUNT],
+
+    pub mode: Mode,
+
+    //TODO Depending on how much I have to do things like this,
+    //consider having multiple ways to retrieve compoents effiecently,
+    //e.g. by compoent type, position etc.
+    pub selectrixId: usize,
 }
 
 impl GameState {
@@ -27,6 +35,7 @@ impl GameState {
         let mut positions = [(0, 0); GameState::ENTITY_COUNT];
         let mut appearances = [Appearance::default(); GameState::ENTITY_COUNT];
         let mut intra_cell_positions = [Four(_2by2::_0_0); GameState::ENTITY_COUNT];
+        let mut player_types = [PlayerType::default(); GameState::ENTITY_COUNT];
 
         {
             let mut i = 0;
@@ -46,6 +55,7 @@ impl GameState {
         positions[playerId] = get_board_xy(playerId).unwrap_or((0, 0));
         appearances[playerId].colour = BLUE;
         appearances[playerId].shape = Shape::Player;
+        player_types[playerId] = PlayerType::Avatar;
 
         let nineCircleIdBase = playerId + 1;
 
@@ -105,27 +115,23 @@ impl GameState {
             };
         }
 
-        let selectrixIdBase = solidNineCircleIdBase + 9;
+        let selectrixId = solidNineCircleIdBase + 9;
 
-        for selectrixId in selectrixIdBase..selectrixIdBase + 4 {
-            entities[selectrixId] |=
-                Component::Position | Component::Appearance | Component::IntraCellPosition;
-            positions[selectrixId] = ((selectrixId - selectrixIdBase) as u8, 5);
-            appearances[selectrixId].colour = 0xFF33CCCC;
-            appearances[selectrixId].shape = Shape::Selectrix;
-            intra_cell_positions[selectrixId] = match selectrixId - selectrixIdBase {
-                0 => Four(_2by2::_0_0),
-                1 => Four(_2by2::_1_0),
-                2 => Four(_2by2::_0_1),
-                _ => Four(_2by2::_1_1),
-            };
-        }
+        entities[selectrixId] |= Component::Position | Component::Appearance
+            | Component::PlayerControlled
+            | Component::IntraCellPosition;
+        appearances[selectrixId].colour = YELLOW;
+        appearances[selectrixId].shape = Shape::Selectrix;
+        player_types[selectrixId] = PlayerType::Selectrix;
 
         GameState {
             entities,
             positions,
             appearances,
             intra_cell_positions,
+            player_types,
+            mode: Mode::MoveAvatar,
+            selectrixId,
         }
     }
 }
@@ -141,6 +147,31 @@ pub mod Component {
              | PlayerControlled.bits,
              const IntraCellPosition = 1 << 3,
         }
+    }
+}
+
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub enum PlayerType {
+    NonPlayer,
+    Avatar,
+    Selectrix,
+}
+
+impl Default for PlayerType {
+    fn default() -> Self {
+        PlayerType::NonPlayer
+    }
+}
+
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub enum Mode {
+    MoveAvatar,
+    MoveSelectrix,
+}
+
+impl Default for Mode {
+    fn default() -> Self {
+        Mode::MoveAvatar
     }
 }
 

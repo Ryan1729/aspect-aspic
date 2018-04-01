@@ -15,6 +15,7 @@ pub const SCREEN_HEIGHT: usize = 240;
 pub const BLUE: u32 = 0xFFEE2222;
 pub const GREEN: u32 = 0xFF22EE33;
 pub const RED: u32 = 0xFF2222EE;
+pub const YELLOW: u32 = 0xFF33CCCC;
 pub const FLOOR: u32 = 0xFF104010;
 
 //in pixels

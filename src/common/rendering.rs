@@ -533,6 +533,44 @@ pub enum _2by2 {
     _1_1,
 }
 
+impl _2by2 {
+    pub fn right(&self) -> Self {
+        match *self {
+            _2by2::_0_0 => _2by2::_1_0,
+            _2by2::_1_0 => _2by2::_0_0,
+            _2by2::_0_1 => _2by2::_1_1,
+            _2by2::_1_1 => _2by2::_0_1,
+        }
+    }
+
+    pub fn left(&self) -> Self {
+        match *self {
+            _2by2::_1_0 => _2by2::_0_0,
+            _2by2::_0_0 => _2by2::_1_0,
+            _2by2::_1_1 => _2by2::_0_1,
+            _2by2::_0_1 => _2by2::_1_1,
+        }
+    }
+
+    pub fn up(&self) -> Self {
+        match *self {
+            _2by2::_0_0 => _2by2::_0_1,
+            _2by2::_0_1 => _2by2::_0_0,
+            _2by2::_1_0 => _2by2::_1_1,
+            _2by2::_1_1 => _2by2::_1_0,
+        }
+    }
+
+    pub fn down(&self) -> Self {
+        match *self {
+            _2by2::_0_1 => _2by2::_0_0,
+            _2by2::_0_0 => _2by2::_0_1,
+            _2by2::_1_1 => _2by2::_1_0,
+            _2by2::_1_0 => _2by2::_1_1,
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 pub enum _3by3 {
     _0_0,
@@ -544,6 +582,64 @@ pub enum _3by3 {
     _2_0,
     _2_1,
     _2_2,
+}
+
+impl _3by3 {
+    pub fn right(&self) -> Self {
+        match *self {
+            _3by3::_0_0 => _3by3::_1_0,
+            _3by3::_1_0 => _3by3::_2_0,
+            _3by3::_2_0 => _3by3::_0_0,
+            _3by3::_0_1 => _3by3::_1_1,
+            _3by3::_1_1 => _3by3::_2_1,
+            _3by3::_2_1 => _3by3::_0_1,
+            _3by3::_0_2 => _3by3::_1_2,
+            _3by3::_1_2 => _3by3::_2_2,
+            _3by3::_2_2 => _3by3::_0_2,
+        }
+    }
+
+    pub fn left(&self) -> Self {
+        match *self {
+            _3by3::_1_0 => _3by3::_0_0,
+            _3by3::_2_0 => _3by3::_1_0,
+            _3by3::_0_0 => _3by3::_2_0,
+            _3by3::_1_1 => _3by3::_0_1,
+            _3by3::_2_1 => _3by3::_1_1,
+            _3by3::_0_1 => _3by3::_2_1,
+            _3by3::_1_2 => _3by3::_0_2,
+            _3by3::_2_2 => _3by3::_1_2,
+            _3by3::_0_2 => _3by3::_2_2,
+        }
+    }
+
+    pub fn up(&self) -> Self {
+        match *self {
+            _3by3::_0_0 => _3by3::_0_2,
+            _3by3::_0_1 => _3by3::_0_0,
+            _3by3::_0_2 => _3by3::_0_1,
+            _3by3::_1_0 => _3by3::_1_2,
+            _3by3::_1_1 => _3by3::_1_0,
+            _3by3::_1_2 => _3by3::_1_1,
+            _3by3::_2_0 => _3by3::_2_2,
+            _3by3::_2_1 => _3by3::_2_0,
+            _3by3::_2_2 => _3by3::_2_1,
+        }
+    }
+
+    pub fn down(&self) -> Self {
+        match *self {
+            _3by3::_0_2 => _3by3::_0_0,
+            _3by3::_0_0 => _3by3::_0_1,
+            _3by3::_0_1 => _3by3::_0_2,
+            _3by3::_1_2 => _3by3::_1_0,
+            _3by3::_1_0 => _3by3::_1_1,
+            _3by3::_1_1 => _3by3::_1_2,
+            _3by3::_2_2 => _3by3::_2_0,
+            _3by3::_2_0 => _3by3::_2_1,
+            _3by3::_2_1 => _3by3::_2_2,
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -583,6 +679,34 @@ impl IntraCellPosition {
 
                 (x + w / 6, y + h / 6)
             }
+        }
+    }
+
+    pub fn right(&self) -> IntraCellPosition {
+        match *self {
+            Four(pos) => Four(pos.right()),
+            Nine(pos) => Nine(pos.right()),
+        }
+    }
+
+    pub fn left(&self) -> IntraCellPosition {
+        match *self {
+            Four(pos) => Four(pos.left()),
+            Nine(pos) => Nine(pos.left()),
+        }
+    }
+
+    pub fn up(&self) -> IntraCellPosition {
+        match *self {
+            Four(pos) => Four(pos.up()),
+            Nine(pos) => Nine(pos.up()),
+        }
+    }
+
+    pub fn down(&self) -> IntraCellPosition {
+        match *self {
+            Four(pos) => Four(pos.down()),
+            Nine(pos) => Nine(pos.down()),
         }
     }
 }
