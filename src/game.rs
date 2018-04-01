@@ -10,6 +10,7 @@ impl GameState {
         self.entities[id].contains(Component::Player) && self.player_types[id] == PlayerType::Avatar
     }
 }
+//TODO picking up and throwing orbs (no interactions just placement first)
 
 #[inline]
 pub fn update_and_render(state: &mut GameState, framebuffer: &mut Framebuffer, input: Input) {
@@ -120,6 +121,10 @@ pub fn update_and_render(state: &mut GameState, framebuffer: &mut Framebuffer, i
         _ => state.mode,
     };
 
+    if input.pressed_this_frame(Button::Select) {
+        state.inventory_index = (state.inventory_index + 1) % state.inventory.len() as u8;
+    }
+
     framebuffer.clear();
 
     for i in 0..GameState::ENTITY_COUNT {
@@ -148,5 +153,30 @@ pub fn update_and_render(state: &mut GameState, framebuffer: &mut Framebuffer, i
         }
     }
 
-    framebuffer.draw_filled_rect(HUD_LEFT_EDGE, 0, HUD_WIDTH, SCREEN_HEIGHT, 0xFF333333);
+    framebuffer.draw_filled_rect(HUD_LEFT_EDGE, 0, HUD_WIDTH, SCREEN_HEIGHT, GREY);
+
+    for i in 0..state.inventory.len() {
+        let item = state.inventory[i];
+
+        let x = INVENTORY_LEFT_EDGE;
+        let y = (INVENTORY_HEIGHT + 4) * (i + 1);
+
+        framebuffer.draw_filled_rect(x, y, INVENTORY_WIDTH, INVENTORY_HEIGHT, PURPLE);
+
+        match item {
+            OrbType::DeadOrb => {
+                framebuffer.draw_circle(
+                    x + INVENTORY_WIDTH / 2,
+                    y + INVENTORY_HEIGHT / 2,
+                    ORB_RADIUS,
+                    RED,
+                );
+            }
+            _ => {}
+        }
+
+        if i as u8 == state.inventory_index {
+            framebuffer.draw_rect(x, y, INVENTORY_WIDTH, INVENTORY_HEIGHT, YELLOW);
+        }
+    }
 }

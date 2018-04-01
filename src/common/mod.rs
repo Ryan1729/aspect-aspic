@@ -21,6 +21,9 @@ pub struct GameState {
 
     pub mode: Mode,
 
+    pub inventory: [OrbType; 3],
+    pub inventory_index: u8,
+
     //TODO Depending on how much I have to do things like this,
     //consider having multiple ways to retrieve compoents effiecently,
     //e.g. by compoent type, position etc.
@@ -134,6 +137,8 @@ impl GameState {
             mode: Mode::MoveAvatar,
             avatarId,
             selectrixId,
+            inventory: [OrbType::DeadOrb, OrbType::DeadOrb, OrbType::NoOrb], //Default::default(),
+            inventory_index: 0,
         }
     }
 }
@@ -162,6 +167,18 @@ pub enum PlayerType {
 impl Default for PlayerType {
     fn default() -> Self {
         PlayerType::NonPlayer
+    }
+}
+
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub enum OrbType {
+    NoOrb,
+    DeadOrb,
+}
+
+impl Default for OrbType {
+    fn default() -> Self {
+        OrbType::NoOrb
     }
 }
 

@@ -48,6 +48,8 @@ macro_rules! set_alpha {
     };
 }
 
+//TODO either pick nice numbers (multiples of 4?) that don't look bad due to rounding,
+//or switch to floats and do our own bi-linear blending down to integer pixels
 impl Framebuffer {
     pub fn new() -> Framebuffer {
         Framebuffer::default()
@@ -449,22 +451,22 @@ impl Appearance {
                 );
             }
             Shape::DeadOrb0 => {
-                framebuffer.draw_circle(px_x, px_y, CELL_DIAMETER / 9, colour);
+                framebuffer.draw_circle(px_x, px_y, ORB_RADIUS, colour);
             }
             Shape::LiveOrb0 => {
-                framebuffer.draw_filled_circle(px_x, px_y, CELL_DIAMETER / 9, colour);
+                framebuffer.draw_filled_circle(px_x, px_y, ORB_RADIUS, colour);
             }
             Shape::Blob0 => {
                 framebuffer.draw_circle(
                     px_x - CELL_WIDTH / 9,
                     px_y - CELL_HEIGHT / 9,
-                    CELL_DIAMETER / 9,
+                    ORB_RADIUS,
                     colour,
                 );
                 framebuffer.draw_circle(
                     px_x + CELL_WIDTH / 9,
                     px_y + CELL_HEIGHT / 9,
-                    CELL_DIAMETER / 9,
+                    ORB_RADIUS,
                     colour,
                 );
             }
