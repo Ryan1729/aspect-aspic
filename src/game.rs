@@ -94,10 +94,10 @@ pub fn update_and_render(state: &mut GameState, framebuffer: &mut Framebuffer, i
                 if y < BOARD_HEIGHT - 1 && inter_pos.on_bottom_edge() {
                     y = y.saturating_add(1);
                     inter_pos = inter_pos.down();
-                    appearance.offset.0 = -((CELL_HEIGHT / 2) as isize);
+                    appearance.offset.1 = -((CELL_HEIGHT / 2) as isize);
                 } else if !inter_pos.on_bottom_edge() {
                     inter_pos = inter_pos.down();
-                    appearance.offset.0 = -((CELL_HEIGHT / 2) as isize);
+                    appearance.offset.1 = -((CELL_HEIGHT / 2) as isize);
                 }
             }
 

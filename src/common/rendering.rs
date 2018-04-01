@@ -419,7 +419,13 @@ impl Appearance {
         pos: Position,
         intra_pos: IntraCellPosition,
     ) {
-        self.render_positioned_at_offset(framebuffer, pos, intra_pos.get_offset());
+        let intra_pos_offset = intra_pos.get_offset();
+        let offset = (
+            self.offset.0 + intra_pos_offset.0,
+            self.offset.1 + intra_pos_offset.1,
+        );
+
+        self.render_positioned_at_offset(framebuffer, pos, offset);
     }
 
     pub fn render_positioned(&self, framebuffer: &mut Framebuffer, pos: Position) {
